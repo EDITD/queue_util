@@ -79,7 +79,7 @@ class Consumer(object):
                 #
                 if new_messages:
                     for queue_name, data in new_messages:
-                        destination_queue = self.get_destination_queues(queue_name)
+                        destination_queue = self.get_queue(queue_name)
                         destination_queue.put(data)
 
                 # We're done with the original message.
