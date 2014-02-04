@@ -74,6 +74,13 @@ class Consumer(object):
                 # Break out of our loop.
                 #
                 break
+
+            except:
+                # Keep going, but don't ack the message.
+                # Also, log the exception.
+                #
+                logging.exception("Exception handling data")
+
             else:
                 # Queue up the new messages (if any).
                 #
