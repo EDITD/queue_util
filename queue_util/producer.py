@@ -41,7 +41,7 @@ class Producer(object):
         num_enqueued = 0
         while True:
             try:
-                logging.debug("Starting batch size={0}".format(batch_size))
+                logging.debug("Starting batch (batch_size={0})".format(batch_size))
                 for i in range(batch_size):
                     self.put(input_iter.next())
                     num_enqueued += 1
