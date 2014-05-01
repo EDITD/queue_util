@@ -16,6 +16,7 @@ def handle_data(data):
     yield ("next_target", new_data)
 """
 import logging
+import time
 
 import kombu
 
@@ -23,10 +24,13 @@ import kombu
 
 class Consumer(object):
 
-    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None):
+    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
+
+        self.is_paused = False
+        self.pause_delay = pause_delay
 
         # Connect to the source queue.
         #
@@ -68,6 +72,10 @@ class Consumer(object):
                 data = message.payload
 
                 new_messages = self.handle_data(data)
+
+                while self.paused:
+                    # Don't move on to the next message until we are unpaused!
+                    time.sleep(self.pause_delay)
 
             except KeyboardInterrupt:
                 logging.info("Caught Ctrl-C. Byee!")
