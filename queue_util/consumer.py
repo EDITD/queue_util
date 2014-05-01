@@ -73,7 +73,7 @@ class Consumer(object):
 
                 new_messages = self.handle_data(data)
 
-                while self.paused:
+                while self.is_paused:
                     # Don't move on to the next message until we are unpaused!
                     time.sleep(self.pause_delay)
 
