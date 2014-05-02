@@ -29,7 +29,6 @@ class Consumer(object):
         self.compression = compression
         self.queue_cache = {}
 
-        self.is_paused = False
         self.pause_delay = pause_delay
 
         # Connect to the source queue.
@@ -68,21 +67,31 @@ class Consumer(object):
         """
         pass
 
+    def is_paused(self):
+        """Return True if the Consumer should be paused. This is checked before
+        *every* handle item (and repeatedly if the consumer is paused), so if
+        a custom is_pause is provided then don't make it expensive!
+        """
+        # A default consumer never pauses.
+        #
+        return False
+
     def run_forever(self):
         """Keep running (unless we get a Ctrl-C).
         """
         while True:
             try:
+                while self.is_paused():
+                    # Don't move on to the next message until we are unpaused!
+                    #
+                    time.sleep(self.pause_delay)
+                    
                 message = self.source_queue.get(block=True)
                 data = message.payload
 
                 new_messages = self.handle_data(data)
 
                 self.post_handle_data()
-
-                while self.is_paused:
-                    # Don't move on to the next message until we are unpaused!
-                    time.sleep(self.pause_delay)
 
             except KeyboardInterrupt:
                 logging.info("Caught Ctrl-C. Byee!")
