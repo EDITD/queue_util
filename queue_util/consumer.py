@@ -36,7 +36,7 @@ class Consumer(object):
         self.broker = kombu.BrokerConnection(rabbitmq_host)
         self.source_queue = self.get_queue(source_queue_name, serializer=serializer, compression=compression)
 
-        # The handle_data method will be applied to each item in the queue. 
+        # The handle_data method will be applied to each item in the queue.
         #
         self.handle_data = handle_data
 
@@ -81,11 +81,20 @@ class Consumer(object):
         """
         while True:
             try:
+                is_running = True
                 while self.is_paused():
+                    if is_running:
+                        logging.info("consumer is now paused")
+                        is_running = False
                     # Don't move on to the next message until we are unpaused!
                     #
                     time.sleep(self.pause_delay)
-                    
+
+                # Only log this if we came out of the while loop.
+                #
+                if not is_running:
+                    logging.info("consumer is not paused")
+
                 message = self.source_queue.get(block=True)
                 data = message.payload
 
