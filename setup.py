@@ -13,7 +13,7 @@ REQUIREMENTS = [
 if __name__ == "__main__":
     setuptools.setup(
         name="queue_util",
-        version="0.0.3",
+        version="0.0.4",
         author="Sujay Mansingh",
         author_email="sujay.mansingh@gmail.com",
         packages=setuptools.find_packages(),
