@@ -63,6 +63,11 @@ class Consumer(object):
             self.queue_cache[cache_key] = self.broker.SimpleQueue(queue_name, **kwargs)
         return self.queue_cache[cache_key]
 
+    def post_handle_data(self):
+        """This gets called after each item has been processed.
+        """
+        pass
+
     def run_forever(self):
         """Keep running (unless we get a Ctrl-C).
         """
@@ -72,6 +77,8 @@ class Consumer(object):
                 data = message.payload
 
                 new_messages = self.handle_data(data)
+
+                self.post_handle_data()
 
                 while self.is_paused:
                     # Don't move on to the next message until we are unpaused!
