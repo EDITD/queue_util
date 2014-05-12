@@ -16,15 +16,19 @@ def handle_data(data):
     yield ("next_target", new_data)
 """
 import logging
+import os
+import socket
 import time
 
 import kombu
+import statsd
 
+from queue_util import stats
 
 
 class Consumer(object):
 
-    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5):
+    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util"):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
@@ -39,6 +43,12 @@ class Consumer(object):
         # The handle_data method will be applied to each item in the queue.
         #
         self.handle_data = handle_data
+
+        if statsd_host:
+            prefix = self.get_full_statsd_prefix(statsd_prefix, source_queue_name)
+            self.statsd_client = statsd.StatsClient(statsd_host, prefix=prefix)
+        else:
+            self.statsd_client = None
 
     def get_queue(self, queue_name, serializer=None, compression=None):
         kwargs = {}
@@ -98,7 +108,11 @@ class Consumer(object):
                 message = self.source_queue.get(block=True)
                 data = message.payload
 
-                new_messages = self.handle_data(data)
+                with stats.time_block(self.statsd_client):
+                    new_messages = self.handle_data(data)
+
+                # Must be successful if we have reached here.
+                stats.mark_successful_job(self.statsd_client)
 
                 self.post_handle_data()
 
@@ -111,8 +125,9 @@ class Consumer(object):
             except:
                 # Keep going, but don't ack the message.
                 # Also, log the exception.
-                #
                 logging.exception("Exception handling data")
+
+                stats.mark_failed_job(self.statsd_client)
 
             else:
                 # Queue up the new messages (if any).
@@ -125,3 +140,18 @@ class Consumer(object):
                 # We're done with the original message.
                 #
                 message.ack()
+
+    def get_full_statsd_prefix(self, base_prefix, queuename):
+        """Return a key that is unique to this worker.
+        So it will be queue_name.hostname.workerid
+        """
+        hostname_raw = socket.gethostname()
+        # We remove '.' chars from the hostname because statsd uses those to
+        # group prefixes.
+        hostname = hostname_raw.replace(".", "_")
+
+        # We define the workerid to be the pid. That is bound to be unique for
+        # each worker on a host.
+        workerid = str(os.getpid())
+
+        return "{0}.{1}.{2}.{3}".format(base_prefix, queuename, hostname, workerid)
