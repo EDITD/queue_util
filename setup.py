@@ -7,6 +7,7 @@ REQUIREMENTS = [
     "kombu==2.3.2",
     "nose==1.3.0",
     "requests>=0.14",
+    "statsd>=2.1.2",
 ]
 
 
