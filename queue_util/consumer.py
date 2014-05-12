@@ -28,7 +28,7 @@ from queue_util import stats
 
 class Consumer(object):
 
-    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util"):
+    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
@@ -43,6 +43,8 @@ class Consumer(object):
         # The handle_data method will be applied to each item in the queue.
         #
         self.handle_data = handle_data
+
+        self.workerid = workerid
 
         if statsd_host:
             prefix = self.get_full_statsd_prefix(statsd_prefix, source_queue_name)
@@ -150,8 +152,11 @@ class Consumer(object):
         # group prefixes.
         hostname = hostname_raw.replace(".", "_")
 
-        # We define the workerid to be the pid. That is bound to be unique for
-        # each worker on a host.
-        workerid = str(os.getpid())
+        # If we have specified a workerid then use it, otherwise use the OS pid
+        # (that's bound to be unique per host).
+        if self.workerid is not None:
+            workerid = self.workerid
+        else:
+            workerid = str(os.getpid())
 
         return "{0}.{1}.{2}.{3}".format(base_prefix, queuename, hostname, workerid)
