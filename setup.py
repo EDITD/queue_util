@@ -6,13 +6,15 @@ import setuptools
 REQUIREMENTS = [
     "kombu==2.3.2",
     "nose==1.3.0",
+    "requests>=0.14",
+    "statsd>=2.1.2",
 ]
 
 
 if __name__ == "__main__":
     setuptools.setup(
         name="queue_util",
-        version="0.0.1",
+        version="0.0.5",
         author="Sujay Mansingh",
         author_email="sujay.mansingh@gmail.com",
         packages=setuptools.find_packages(),
