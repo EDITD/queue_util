@@ -28,7 +28,7 @@ from queue_util import stats
 
 class Consumer(object):
 
-    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None):
+    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
@@ -44,7 +44,7 @@ class Consumer(object):
         #
         self.handle_data = handle_data
 
-        self.workerid = workerid
+        self.workerid = worker_id or workerid
 
         if statsd_host:
             prefix = self.get_full_statsd_prefix(statsd_prefix, source_queue_name)
