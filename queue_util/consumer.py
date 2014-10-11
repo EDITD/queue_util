@@ -28,7 +28,7 @@ from queue_util import stats
 
 class Consumer(object):
 
-    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None, reject=False, requeue=False):
+    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None, reject=False, requeue=False, handle_exception=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
@@ -49,6 +49,8 @@ class Consumer(object):
         # If both True, requeue takes priority
         self.requeue = requeue
         self.reject = reject
+
+        self.handle_exception = handle_exception
 
         if statsd_host:
             prefix = self.get_full_statsd_prefix(statsd_prefix, source_queue_name)
@@ -132,6 +134,9 @@ class Consumer(object):
                 # Keep going, but don't ack the message.
                 # Also, log the exception.
                 logging.exception("Exception handling data")
+
+                if self.handle_exception is not None:
+                    self.handle_exception()
 
                 if self.requeue:
                     message.requeue()
