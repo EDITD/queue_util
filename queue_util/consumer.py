@@ -28,7 +28,7 @@ from queue_util import stats
 
 class Consumer(object):
 
-    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None, reject=False, requeue=False, handle_exception=None):
+    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None, dont_requeue=None, reject=None, handle_exception=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
@@ -47,8 +47,8 @@ class Consumer(object):
         self.workerid = worker_id or workerid
 
         # If both True, requeue takes priority
-        self.requeue = requeue
-        self.reject = reject
+        self.requeue = False if dont_requeue else True
+        self.reject = True if reject else False
 
         self.handle_exception = handle_exception
 
