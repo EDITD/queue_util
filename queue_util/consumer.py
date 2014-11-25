@@ -99,19 +99,7 @@ class Consumer(object):
         """
         while True:
             try:
-                is_running = True
-                while self.is_paused():
-                    if is_running:
-                        logging.info("consumer is now paused")
-                        is_running = False
-                    # Don't move on to the next message until we are unpaused!
-                    #
-                    time.sleep(self.pause_delay)
-
-                # Only log this if we came out of the while loop.
-                #
-                if not is_running:
-                    logging.info("consumer is not paused")
+                self.wait_if_paused()
 
                 message = self.source_queue.get(block=True)
                 data = message.payload
@@ -156,6 +144,22 @@ class Consumer(object):
                 # We're done with the original message.
                 #
                 message.ack()
+
+    def wait_if_paused(self):
+        """Check to see whether the current process should be paused, and
+        wait (via time.sleep) until unpaused.
+        """
+        is_running = True
+        while self.is_paused():
+            if is_running:
+                logging.info("consumer is now paused")
+                is_running = False
+            # Don't move on until we are unpaused!
+            time.sleep(self.pause_delay)
+
+        # Only log this if we came out of the while loop.
+        if not is_running:
+            logging.info("consumer is not paused")
 
     def get_full_statsd_prefix(self, base_prefix, queuename):
         """Return a key that is unique to this worker.
