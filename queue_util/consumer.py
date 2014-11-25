@@ -28,7 +28,7 @@ from queue_util import stats
 
 class Consumer(object):
 
-    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None):
+    def __init__(self, source_queue_name, handle_data, rabbitmq_host, serializer=None, compression=None, pause_delay=5, statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None, dont_requeue=None, reject=None, handle_exception=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
@@ -45,6 +45,12 @@ class Consumer(object):
         self.handle_data = handle_data
 
         self.workerid = worker_id or workerid
+
+        # If both True, requeue takes priority
+        self.requeue = False if dont_requeue else True
+        self.reject = True if reject else False
+
+        self.handle_exception = handle_exception
 
         if statsd_host:
             prefix = self.get_full_statsd_prefix(statsd_prefix, source_queue_name)
@@ -128,6 +134,14 @@ class Consumer(object):
                 # Keep going, but don't ack the message.
                 # Also, log the exception.
                 logging.exception("Exception handling data")
+
+                if self.handle_exception is not None:
+                    self.handle_exception()
+
+                if self.requeue:
+                    message.requeue()
+                elif self.reject:
+                    message.reject()
 
                 stats.mark_failed_job(self.statsd_client)
 
