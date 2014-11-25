@@ -25,6 +25,7 @@ i.e.
 """
 import logging
 import os
+import Queue
 import socket
 import time
 
@@ -153,7 +154,7 @@ class Consumer(object):
                 #
                 message.ack()
 
-    def batched_run_forever(self, size):
+    def batched_run_forever(self, size, wait_timeout_seconds=5):
         """This will take messages off the queue and put them in a buffer.
         Once the buffer reaches the given size, handle_data is called for the
         entire buffer. (So handle_data must be able to handle a list.)
@@ -167,10 +168,24 @@ class Consumer(object):
             try:
                 self.wait_if_paused()
 
-                message = self.source_queue.get(block=True)
-                buffer.append(message)
+                queue_was_empty = False
+                message = None
 
-                if len(buffer) >= size:
+                try:
+                    # We need to have a timeout. Otherwise if we had no more
+                    # messages coming in, but len(buffer) < size, then the
+                    # buffer would never get processed!
+                    message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
+                except Queue.Empty:
+                    queue_was_empty = True
+
+                if message:
+                    buffer.append(message)
+
+                # We proceed to handle the buffer if
+                # 1. it has reached the given size or
+                # 2. we drained the queue, but the buffer is smaller than size
+                if len(buffer) >= size or (buffer and queue_was_empty):
                     try:
                         with stats.time_block(self.statsd_client):
                             new_messages = self.handle_batch(buffer)
