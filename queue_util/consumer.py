@@ -232,7 +232,7 @@ class Consumer(object):
             for message in messages:
                 message.ack()
         except Exception as e:
-            # There was an problem so we reject or requeue the whole batch.
+            # There was a problem so we reject or requeue the whole batch.
             for message in messages:
                 if self.requeue:
                     message.requeue()
