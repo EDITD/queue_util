@@ -230,16 +230,13 @@ class Consumer(object):
             new_messages = self.handle_data([message.payload for message in messages])
             # If we are here, then handle_data ran without any erroes.
             for message in messages:
-                logging.debug("Acking {0}".format(message.payload))
                 message.ack()
         except Exception as e:
             # There was an problem so we reject or requeue the whole batch.
             for message in messages:
                 if self.requeue:
-                    logging.debug("Requeueing {0}".format(message.payload))
                     message.requeue()
                 elif self.reject:
-                    logging.debug("Rejecting {0}".format(message.payload))
                     message.reject()
             # Now that we're done with the messages, handle the exception
             raise e
