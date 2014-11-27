@@ -14,9 +14,18 @@ def handle_data(data):
     # Forward the new_data to another queue.
     #
     yield ("next_target", new_data)
+
+If used with run_forever, handle_data is called once per message.
+i.e.
+    self.handle_data(message.payload)
+
+If used with batched_run_forever, handle_data is called with a list of payloads
+i.e.
+    self.handle_data([message.payload for message in current_batch])
 """
 import logging
 import os
+import Queue
 import socket
 import time
 
@@ -99,19 +108,7 @@ class Consumer(object):
         """
         while True:
             try:
-                is_running = True
-                while self.is_paused():
-                    if is_running:
-                        logging.info("consumer is now paused")
-                        is_running = False
-                    # Don't move on to the next message until we are unpaused!
-                    #
-                    time.sleep(self.pause_delay)
-
-                # Only log this if we came out of the while loop.
-                #
-                if not is_running:
-                    logging.info("consumer is not paused")
+                self.wait_if_paused()
 
                 message = self.source_queue.get(block=True)
                 data = message.payload
@@ -156,6 +153,111 @@ class Consumer(object):
                 # We're done with the original message.
                 #
                 message.ack()
+
+    def batched_run_forever(self, size, wait_timeout_seconds=5):
+        """This will take messages off the queue and put them in a buffer.
+        Once the buffer reaches the given size, handle_data is called for the
+        entire buffer. (So handle_data must be able to handle a list.)
+        If handle_data doesn't throw an exception, all messages are ack'd.
+        Otherwise all messages are requeued/rejected.
+        """
+        buffer = []
+
+        while True:
+            new_messages = []
+            try:
+                self.wait_if_paused()
+
+                queue_was_empty = False
+                message = None
+
+                try:
+                    # We need to have a timeout. Otherwise if we had no more
+                    # messages coming in, but len(buffer) < size, then the
+                    # buffer would never get processed!
+                    message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
+                except Queue.Empty:
+                    queue_was_empty = True
+
+                if message:
+                    buffer.append(message)
+
+                # We proceed to handle the buffer if
+                # 1. it has reached the given size or
+                # 2. we drained the queue, but the buffer is smaller than size
+                if len(buffer) >= size or (buffer and queue_was_empty):
+                    try:
+                        with stats.time_block(self.statsd_client):
+                            new_messages = self.handle_batch(buffer)
+
+                        stats.mark_successful_job(self.statsd_client)
+                        self.post_handle_data()
+                    except KeyboardInterrupt as ki:
+                        # Raise this for the outer try to handle.
+                        raise ki
+                    except:
+                        logging.exception("Exception handling batch")
+                        if self.handle_exception is not None:
+                            self.handle_exception()
+                        stats.mark_failed_job(self.statsd_client)
+                    finally:
+                        # If all went well then we have ack'd the messages.
+                        # If not, we have requeued or rejected them.
+                        # Either way we are done with the buffer.
+                        buffer = []
+
+            except KeyboardInterrupt:
+                logging.info("Caught Ctrl-C. Byee!")
+                break
+
+            except:
+                # When could this happen? Perhaps while waiting?
+                logging.exception("Exception elsewhere in batched_run_forever")
+
+            else:
+                if new_messages:
+                    for queue_name, data in new_messages:
+                        destination_queue = self.get_queue(queue_name)
+                        destination_queue.put(data)
+
+    def handle_batch(self, messages):
+        """Call handle_data on a batch of messages.
+        All messages will be ack'd only if the entire function succeeds.
+        Otherwise all messages will be rejected/requeued.
+        """
+        new_messages = []
+        try:
+            new_messages = self.handle_data([message.payload for message in messages])
+            # If we are here, then handle_data ran without any erroes.
+            for message in messages:
+                message.ack()
+        except Exception as e:
+            # There was a problem so we reject or requeue the whole batch.
+            for message in messages:
+                if self.requeue:
+                    message.requeue()
+                elif self.reject:
+                    message.reject()
+            # Now that we're done with the messages, handle the exception
+            raise e
+
+        return new_messages
+
+    def wait_if_paused(self):
+        """Check to see whether the current process should be paused, and
+        wait (via time.sleep) until unpaused.
+        """
+        is_running = True
+        while self.is_paused():
+            if is_running:
+                logging.info("consumer is now paused")
+                is_running = False
+            # Don't move on until we are unpaused!
+            time.sleep(self.pause_delay)
+
+        # Only log this if we came out of the while loop.
+        if not is_running:
+            logging.info("consumer is not paused")
 
     def get_full_statsd_prefix(self, base_prefix, queuename):
         """Return a key that is unique to this worker.
