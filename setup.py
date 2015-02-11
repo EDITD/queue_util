@@ -4,7 +4,7 @@ import setuptools
 # How do we keep this in sync with requirements.pip?
 #
 REQUIREMENTS = [
-    "kombu==2.3.2",
+    "kombu>=2.5.12",
     "nose==1.3.0",
     "requests>=0.14",
     "statsd>=2.1.2",
