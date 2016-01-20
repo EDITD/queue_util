@@ -107,6 +107,7 @@ class Consumer(object):
         """Keep running (unless we get a Ctrl-C).
         """
         while True:
+            message = None
             try:
                 self.wait_if_paused()
 
@@ -135,10 +136,11 @@ class Consumer(object):
                 if self.handle_exception is not None:
                     self.handle_exception()
 
-                if self.requeue:
-                    message.requeue()
-                elif self.reject:
-                    message.reject()
+                if message:
+                    if self.requeue:
+                        message.requeue()
+                    elif self.reject:
+                        message.reject()
 
                 stats.mark_failed_job(self.statsd_client)
 
