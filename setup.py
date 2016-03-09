@@ -1,4 +1,5 @@
 import setuptools
+import sys
 
 
 # How do we keep this in sync with requirements.pip?
@@ -12,6 +13,11 @@ REQUIREMENTS = [
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "requirements":
+        for req in REQUIREMENTS:
+            print req
+        sys.exit(0)
+
     setuptools.setup(
         name="queue_util",
         version="0.0.11",
