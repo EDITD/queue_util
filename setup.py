@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     setuptools.setup(
         name="queue_util",
-        version="1.0.0",
+        version="1.0.1",
         author="Sujay Mansingh",
         author_email="sujay.mansingh@gmail.com",
         packages=setuptools.find_packages(),
