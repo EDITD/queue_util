@@ -43,7 +43,7 @@ class Producer(object):
             try:
                 logging.debug("Starting batch (batch_size={0})".format(batch_size))
                 for i in range(batch_size):
-                    self.put(input_iter.next())
+                    self.put(next(input_iter))
                     num_enqueued += 1
                 logging.debug("Batch done. {0} items enqueued so far".format(num_enqueued))
             except StopIteration:

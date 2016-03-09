@@ -25,7 +25,7 @@ i.e.
 """
 import logging
 import os
-import Queue
+import queue
 import socket
 import time
 
@@ -178,7 +178,7 @@ class Consumer(object):
                     # messages coming in, but len(buffer) < size, then the
                     # buffer would never get processed!
                     message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
-                except Queue.Empty:
+                except queue.Empty:
                     queue_was_empty = True
 
                 if message:
