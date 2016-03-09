@@ -6,6 +6,7 @@ import time
 
 import kombu
 import requests
+import six
 
 
 class Producer(object):
@@ -43,7 +44,7 @@ class Producer(object):
             try:
                 logging.debug("Starting batch (batch_size={0})".format(batch_size))
                 for i in range(batch_size):
-                    self.put(next(input_iter))
+                    self.put(six.next(input_iter))
                     num_enqueued += 1
                 logging.debug("Batch done. {0} items enqueued so far".format(num_enqueued))
             except StopIteration:
@@ -77,6 +78,6 @@ def get_num_messages(rabbitmq_host, queue_name, port=15672, vhost="%2F", auth=No
     url = "http://{0}:{1}/api/queues/{2}/{3}".format(rabbitmq_host, port, vhost, queue_name)
 
     response = requests.get(url, auth=auth)
-    
+
     queue_data = json.loads(response.content)
     return queue_data["messages"]

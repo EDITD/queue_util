@@ -25,7 +25,6 @@ i.e.
 """
 import logging
 import os
-import queue
 import socket
 import time
 
@@ -33,6 +32,7 @@ import kombu
 import statsd
 
 from queue_util import stats
+from six.moves import queue
 
 
 class Consumer(object):
