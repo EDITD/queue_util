@@ -2,8 +2,6 @@ import setuptools
 import sys
 
 
-# How do we keep this in sync with requirements.pip?
-#
 REQUIREMENTS = [
     "kombu>=2.5,<2.6",
     "nose>=1.3,<1.4",
