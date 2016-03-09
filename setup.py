@@ -8,6 +8,7 @@ REQUIREMENTS = [
     "kombu>=2.5,<2.6",
     "nose>=1.3,<1.4",
     "requests>=2,<3",
+    "six>=1.10.0,<2",
     "statsd>=2.1,<2.2",
 ]
 
