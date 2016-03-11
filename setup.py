@@ -3,7 +3,7 @@ import sys
 
 
 REQUIREMENTS = [
-    "kombu>=2.5,<2.6",
+    "kombu>=3.0.12,<4",
     "requests>=2,<3",
     "six>=1.10.0,<2",
     "statsd>=2.1,<2.2",
