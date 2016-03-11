@@ -67,16 +67,16 @@ class Consumer(object):
         else:
             self.statsd_client = None
 
-    def get_queue(self, queue_name, serializer=None, compression=None):
+    def get_queue(self, queue_name, serializer="default", compression="default"):
         kwargs = {}
 
         # Use 'defaults' if no args were supplied for serializer/compression.
         #
-        serializer = serializer or self.serializer
+        serializer = self.serializer if serializer == "default" else serializer
         if serializer:
             kwargs["serializer"] = serializer
 
-        compression = compression or self.compression
+        compression = self.compression if compression == "default" else compression
         if compression:
             kwargs["compression"] = compression
 
