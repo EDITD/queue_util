@@ -109,10 +109,14 @@ class Consumer(object):
 
             if new_message_length == 4:
                 queue_name, data, serializer, compression = new_message
-            if new_message_length == 3:
+            elif new_message_length == 3:
                 queue_name, data, serializer = new_message
-            else:
+            elif new_message_length == 2:
                 queue_name, data = new_message
+            else:
+                raise ValueError(
+                    "Expected (queue_name, data(, serializer, compression)) but got {}".format(new_message)
+                )
 
             destination_queue = self.get_queue(queue_name)
             destination_queue.put(data)
