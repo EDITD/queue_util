@@ -1,5 +1,6 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
+- allow users of queue_util to specify serializer and compression per new message
 - [breaking] Update kombu to a version that supports Python 3.4
 
 ## v1.0.1
