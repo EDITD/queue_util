@@ -104,7 +104,16 @@ class Consumer(object):
         return False
 
     def queue_new_messages(self, new_messages):
-        for queue_name, data in new_messages:
+        for new_message in new_messages:
+            new_message_length = len(new_message)
+
+            if new_message_length == 4:
+                queue_name, data, serializer, compression = new_message
+            if new_message_length == 3:
+                queue_name, data, serializer = new_message
+            else:
+                queue_name, data = new_message
+
             destination_queue = self.get_queue(queue_name)
             destination_queue.put(data)
 
