@@ -107,6 +107,9 @@ class Consumer(object):
         for new_message in new_messages:
             new_message_length = len(new_message)
 
+            compression = "default"
+            serializer = "default"
+
             if new_message_length == 4:
                 queue_name, data, serializer, compression = new_message
             elif new_message_length == 3:
@@ -118,7 +121,7 @@ class Consumer(object):
                     "Expected (queue_name, data(, serializer, compression)) but got {}".format(new_message)
                 )
 
-            destination_queue = self.get_queue(queue_name)
+            destination_queue = self.get_queue(queue_name, compression, serializer)
             destination_queue.put(data)
 
     def run_forever(self):
