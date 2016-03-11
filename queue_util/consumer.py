@@ -103,6 +103,11 @@ class Consumer(object):
         #
         return False
 
+    def queue_new_messages(self, new_messages):
+        for queue_name, data in new_messages:
+            destination_queue = self.get_queue(queue_name)
+            destination_queue.put(data)
+
     def run_forever(self):
         """Keep running (unless we get a Ctrl-C).
         """
@@ -148,9 +153,7 @@ class Consumer(object):
                 # Queue up the new messages (if any).
                 #
                 if new_messages:
-                    for queue_name, data in new_messages:
-                        destination_queue = self.get_queue(queue_name)
-                        destination_queue.put(data)
+                    self.queue_new_messages(new_messages)
 
                 # We're done with the original message.
                 #
@@ -218,9 +221,7 @@ class Consumer(object):
 
             else:
                 if new_messages:
-                    for queue_name, data in new_messages:
-                        destination_queue = self.get_queue(queue_name)
-                        destination_queue.put(data)
+                    self.queue_new_messages(new_messages)
 
     def handle_batch(self, messages):
         """Call handle_data on a batch of messages.
