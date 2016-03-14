@@ -67,16 +67,16 @@ class Consumer(object):
         else:
             self.statsd_client = None
 
-    def get_queue(self, queue_name, serializer=None, compression=None):
+    def get_queue(self, queue_name, serializer="default", compression="default"):
         kwargs = {}
 
         # Use 'defaults' if no args were supplied for serializer/compression.
         #
-        serializer = serializer or self.serializer
+        serializer = self.serializer if serializer == "default" else serializer
         if serializer:
             kwargs["serializer"] = serializer
 
-        compression = compression or self.compression
+        compression = self.compression if compression == "default" else compression
         if compression:
             kwargs["compression"] = compression
 
@@ -102,6 +102,27 @@ class Consumer(object):
         # A default consumer never pauses.
         #
         return False
+
+    def queue_new_messages(self, new_messages):
+        for new_message in new_messages:
+            new_message_length = len(new_message)
+
+            compression = "default"
+            serializer = "default"
+
+            if new_message_length == 4:
+                queue_name, data, serializer, compression = new_message
+            elif new_message_length == 3:
+                queue_name, data, serializer = new_message
+            elif new_message_length == 2:
+                queue_name, data = new_message
+            else:
+                raise ValueError(
+                    "Expected (queue_name, data(, serializer, compression)) but got {}".format(new_message)
+                )
+
+            destination_queue = self.get_queue(queue_name, compression, serializer)
+            destination_queue.put(data)
 
     def run_forever(self):
         """Keep running (unless we get a Ctrl-C).
@@ -148,9 +169,7 @@ class Consumer(object):
                 # Queue up the new messages (if any).
                 #
                 if new_messages:
-                    for queue_name, data in new_messages:
-                        destination_queue = self.get_queue(queue_name)
-                        destination_queue.put(data)
+                    self.queue_new_messages(new_messages)
 
                 # We're done with the original message.
                 #
@@ -218,9 +237,7 @@ class Consumer(object):
 
             else:
                 if new_messages:
-                    for queue_name, data in new_messages:
-                        destination_queue = self.get_queue(queue_name)
-                        destination_queue.put(data)
+                    self.queue_new_messages(new_messages)
 
     def handle_batch(self, messages):
         """Call handle_data on a batch of messages.
