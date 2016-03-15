@@ -121,7 +121,7 @@ class Consumer(object):
                     "Expected (queue_name, data(, serializer, compression)) but got {}".format(new_message)
                 )
 
-            destination_queue = self.get_queue(queue_name, compression, serializer)
+            destination_queue = self.get_queue(queue_name, serializer, compression)
             destination_queue.put(data)
 
     def run_forever(self):
