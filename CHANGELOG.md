@@ -1,6 +1,9 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
 
+## v2.1.1
+- Fix `msgpack-python` dependency
+
 ## v2.1.0
 - Add the `unicode-msgpack` serializer and make msgpack a dependency
 
