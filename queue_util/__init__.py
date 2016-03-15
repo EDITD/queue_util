@@ -1,4 +1,4 @@
-from .consumer import Consumer
-from .producer import Producer
-from .producer import get_num_messages
-from . import serializers
+from .consumer import Consumer  # noqa
+from .producer import Producer  # noqa
+from .producer import get_num_messages  # noqa
+from . import serializers  # noqa
