@@ -1,4 +1,4 @@
-from queue_util.consumer import Consumer
-from queue_util.producer import Producer
-from queue_util.producer import get_num_messages
+from .consumer import Consumer
+from .producer import Producer
+from .producer import get_num_messages
 from . import serializers
