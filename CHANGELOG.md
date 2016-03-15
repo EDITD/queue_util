@@ -1,6 +1,9 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
 
+## v2.0.1
+- fix bug with the order of specifying serializer and compression per new item
+
 ## v2.0.0
 - allow users of queue_util to specify serializer and compression per new message
 - [breaking] Update kombu to a version that supports Python 3.4
