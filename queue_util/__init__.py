@@ -1,3 +1,4 @@
-from queue_util.consumer import Consumer
-from queue_util.producer import Producer
-from queue_util.producer import get_num_messages
+from .consumer import Consumer  # noqa
+from .producer import Producer  # noqa
+from .producer import get_num_messages  # noqa
+from . import serializers  # noqa

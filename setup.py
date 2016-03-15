@@ -4,6 +4,7 @@ import sys
 
 REQUIREMENTS = [
     "kombu>=3.0.12,<4",
+    "msgpack-python>0.4.7,<0.5",
     "requests>=2,<3",
     "six>=1.10.0,<2",
     "statsd>=2.1,<2.2",
