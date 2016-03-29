@@ -1,6 +1,9 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
 
+## v2.2.0
+- Allow specification of `userid` and `password` when connecting
+
 ## v2.1.1
 - Fix `msgpack-python` dependency
 
