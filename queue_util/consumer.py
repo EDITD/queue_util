@@ -40,7 +40,8 @@ class Consumer(object):
     def __init__(self, source_queue_name, handle_data, rabbitmq_host,
                  serializer=None, compression=None, pause_delay=5,
                  statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None,
-                 dont_requeue=None, reject=None, handle_exception=None):
+                 dont_requeue=None, reject=None, handle_exception=None,
+                 userid=None, password=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
@@ -48,8 +49,12 @@ class Consumer(object):
         self.pause_delay = pause_delay
 
         # Connect to the source queue.
-        #
-        self.broker = kombu.BrokerConnection(rabbitmq_host)
+        connect_kwargs = {}
+        if userid is not None:
+            connect_kwargs["userid"] = userid
+        if password is not None:
+            connect_kwargs["password"] = password
+        self.broker = kombu.BrokerConnection(rabbitmq_host, **connect_kwargs)
         self.source_queue = self.get_queue(source_queue_name, serializer=serializer, compression=compression)
 
         # The handle_data method will be applied to each item in the queue.
