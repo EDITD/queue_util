@@ -7,11 +7,11 @@ from kombu.serialization import register
 
 
 def pack(s):
-    return msgpack.packb(s, use_bin_type=True)
+    return msgpack.packb(s, use_bin_type=True, unicode_errors='ignore')
 
 
 def unpack(s):
-    return msgpack.unpackb(s, encoding='utf-8')
+    return msgpack.unpackb(s, encoding='utf-8', unicode_errors='ignore')
 
 register(
     'unicode-msgpack',
