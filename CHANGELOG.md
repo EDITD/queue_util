@@ -1,5 +1,6 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
+- Ignore unicode_errors on read and write with `unicode-msgpack`
 
 ## v2.1.1
 - Fix `msgpack-python` dependency
