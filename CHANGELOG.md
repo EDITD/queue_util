@@ -1,5 +1,7 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
+
+## v2.2.1
 - Update `unicode-msgpack` serialiser to date-aware implementation
 - Ignore unicode_errors on read and write with `unicode-msgpack`
 
