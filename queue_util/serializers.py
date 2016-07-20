@@ -66,9 +66,19 @@ def unpack(s):
 
 
 register(
-    "unicode-msgpack",
+    "unicode-msgpack-with-dates",
     pack,
     unpack,
     content_type=MESSAGE_CONTENT_TYPE,
     content_encoding=MESSAGE_CONTENT_ENCODING,
+)
+
+# This is around for compatibility reasons (so that we're able to decode any messages
+# that are already in queues, with the old/non-date-aware content_type).
+register(
+    'unicode-msgpack',
+    pack,
+    unpack,
+    content_type='application/x-unicode-msgpack',
+    content_encoding='binary'
 )
