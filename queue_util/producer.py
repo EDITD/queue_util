@@ -1,11 +1,9 @@
 """Allow the ability to connect and publish to a queue.
 """
-import json
 import logging
 import time
 
 import kombu
-import requests
 import six
 
 
@@ -62,22 +60,8 @@ class Producer(object):
             # Now that we have completed one batch, we need to wait.
             #
             max_size = resume_threshold * batch_size
-            num_messages = get_num_messages(self.rabbitmq_host, self.dest_queue_name)
+            num_messages = self.dest_queue.qsize()
             while num_messages >= max_size:
                 logging.debug("Current queue size = {0}, waiting until size <= {1}".format(num_messages, max_size))
                 time.sleep(delay_in_seconds)
-                num_messages = get_num_messages(self.rabbitmq_host, self.dest_queue_name)
-
-
-def get_num_messages(rabbitmq_host, queue_name, port=15672, vhost="%2F", auth=None):
-    """A (very!) approximate attempt to get the number of messages in a queue.
-    It uses the rabbitmq http API (so make sure that is installed).
-    """
-    if not auth:
-        auth = ("guest", "guest")
-    url = "http://{0}:{1}/api/queues/{2}/{3}".format(rabbitmq_host, port, vhost, queue_name)
-
-    response = requests.get(url, auth=auth)
-
-    queue_data = json.loads(response.content)
-    return queue_data["messages"]
+                num_messages = self.dest_queue.qsize()
