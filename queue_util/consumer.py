@@ -47,6 +47,7 @@ class Consumer(object):
         self.queue_cache = {}
 
         self.pause_delay = pause_delay
+        self.terminate = False
 
         # Connect to the source queue.
         connect_kwargs = {}
@@ -104,6 +105,12 @@ class Consumer(object):
         """
         pass
 
+    def is_terminated(self):
+        """Return True if the Consumer should stop consuming. This is checked before
+        *every* handle item (and repeatedly if the consumer is paused), so if
+        a custom is_terminated is provided then don't make it expensive!"""
+        return self.terminate
+
     def is_paused(self):
         """Return True if the Consumer should be paused. This is checked before
         *every* handle item (and repeatedly if the consumer is paused), so if
@@ -134,15 +141,15 @@ class Consumer(object):
             destination_queue = self.get_queue(queue_name, serializer, compression)
             destination_queue.put(data)
 
-    def run_forever(self):
+    def run_forever(self, wait_timeout_seconds=None):
         """Keep running (unless we get a Ctrl-C).
         """
-        while True:
+        while not self.is_terminated():
             message = None
             try:
                 self.wait_if_paused()
 
-                message = self.source_queue.get(block=True)
+                message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
                 data = message.payload
 
                 with stats.time_block(self.statsd_client):
@@ -152,6 +159,9 @@ class Consumer(object):
                 stats.mark_successful_job(self.statsd_client)
 
                 self.post_handle_data()
+
+            except queue.Empty:
+                pass
 
             except KeyboardInterrupt:
                 logging.info("Caught Ctrl-C. Byee!")
@@ -194,7 +204,7 @@ class Consumer(object):
         """
         buffer = []
 
-        while True:
+        while not self.is_terminated():
             new_messages = []
             try:
                 self.wait_if_paused()
@@ -277,7 +287,7 @@ class Consumer(object):
         wait (via time.sleep) until unpaused.
         """
         is_running = True
-        while self.is_paused():
+        while self.is_paused() and not self.is_terminated():
             if is_running:
                 logging.info("consumer is now paused")
                 is_running = False
