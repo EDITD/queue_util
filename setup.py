@@ -45,5 +45,9 @@ if __name__ == "__main__":
             'fast': (
                 "librabbitmq>=2.0.0,<3",
             ),
+            'dev': (
+                'tox>=3.14.0',
+                'docker>=4.1.0,<4.2',
+            ),
         },
     )
