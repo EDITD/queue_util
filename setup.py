@@ -1,3 +1,4 @@
+import re
 import setuptools
 import sys
 
@@ -10,6 +11,18 @@ REQUIREMENTS = [
     "statsd>=2.1,<2.2",
 ]
 
+# Regex matching version pattern
+# (3 numerical values separated by `.`, semver style, followed by an optional pre-release marker)
+version_pattern = re.compile(r"\d+\.\d+\.\d+([.-][\w_-]+)?")
+
+
+def get_version():
+    with open("CHANGELOG.md", "r") as fn:
+        while True:
+            version = version_pattern.search(fn.readline())
+            if version is not None:
+                return "".join(version.group())
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "requirements":
@@ -19,7 +32,7 @@ if __name__ == "__main__":
 
     setuptools.setup(
         name="queue_util",
-        version="2.2.1",
+        version=get_version(),
         author="Sujay Mansingh",
         author_email="sujay.mansingh@gmail.com",
         packages=setuptools.find_packages(),
