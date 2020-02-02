@@ -40,5 +40,10 @@ if __name__ == "__main__":
         license="LICENSE.txt",
         description="A set of utilities for consuming (and producing) from a rabbitmq queue",
         long_description="View the github page (https://github.com/sujaymansingh/queue_util) for more details.",
-        install_requires=REQUIREMENTS
+        install_requires=REQUIREMENTS,
+        extras_require={
+            'fast': (
+                "librabbitmq>=2.0.0,<3",
+            ),
+        },
     )
