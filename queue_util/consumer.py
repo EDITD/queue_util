@@ -37,7 +37,7 @@ from six.moves import queue
 
 class Consumer(object):
 
-    def __init__(self, source_queue_name, handle_data, rabbitmq_host,
+    def __init__(self, source_queue_name, handle_data, rabbitmq_host, rabbitmq_port=None,
                  serializer=None, compression=None, pause_delay=5,
                  statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None,
                  dont_requeue=None, reject=None, handle_exception=None,
@@ -54,6 +54,8 @@ class Consumer(object):
             connect_kwargs["userid"] = userid
         if password is not None:
             connect_kwargs["password"] = password
+        if rabbitmq_port is not None:
+            connect_kwargs["port"] = rabbitmq_port
         self.broker = kombu.BrokerConnection(rabbitmq_host, **connect_kwargs)
         self.source_queue = self.get_queue(source_queue_name, serializer=serializer, compression=compression)
 

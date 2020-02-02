@@ -9,17 +9,26 @@ import six
 
 class Producer(object):
 
-    def __init__(self, dest_queue_name, rabbitmq_host, serializer=None, compression=None):
+    def __init__(self, dest_queue_name, rabbitmq_host, rabbitmq_port=None,
+                 serializer=None, compression=None,
+                 userid=None, password=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
 
         self.rabbitmq_host = rabbitmq_host
+        self.rabbitmq_port = rabbitmq_port
         self.dest_queue_name = dest_queue_name
 
         # Connect to the queue.
-        #
-        broker = kombu.BrokerConnection(rabbitmq_host)
+        connect_kwargs = {}
+        if userid is not None:
+            connect_kwargs["userid"] = userid
+        if password is not None:
+            connect_kwargs["password"] = password
+        if rabbitmq_port is not None:
+            connect_kwargs["port"] = rabbitmq_port
+        broker = kombu.BrokerConnection(rabbitmq_host, **connect_kwargs)
         self.dest_queue = broker.SimpleQueue(dest_queue_name, serializer=serializer, compression=compression)
 
     def put(self, item):
@@ -58,7 +67,6 @@ class Producer(object):
             time.sleep(delay_in_seconds)
 
             # Now that we have completed one batch, we need to wait.
-            #
             max_size = resume_threshold * batch_size
             num_messages = self.dest_queue.qsize()
             while num_messages >= max_size:
