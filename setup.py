@@ -4,10 +4,10 @@ import sys
 
 
 REQUIREMENTS = [
-    "kombu>=3.0.12,<4",
-    "msgpack-python>=0.4.7,<0.5",
-    "six>=1.10.0,<2",
-    "statsd>=2.1,<2.2",
+    "kombu>=4.5.0,<4.6",
+    "six>=1.14.0,<2",
+    "msgpack-python>=0.5.6,<0.6",
+    "statsd>=3.3.0,<4",
 ]
 
 # Regex matching version pattern
