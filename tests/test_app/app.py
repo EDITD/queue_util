@@ -23,7 +23,6 @@ def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
     received = []
     consumer = Consumer(
         rabbit_queue_name,
-        # handle,
         lambda item: received.append(item),
         rabbit_host,
         rabbit_port
