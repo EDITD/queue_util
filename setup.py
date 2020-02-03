@@ -16,11 +16,13 @@ version_pattern = re.compile(r"\d+\.\d+\.\d+([.-][\w_-]+)?")
 
 
 def get_version():
-    with open("CHANGELOG.md", "r") as fn:
-        while True:
-            version = version_pattern.search(fn.readline())
+    changelog_file = "CHANGELOG.md"
+    with open(changelog_file, "r") as changelog:
+        for changelog_line in changelog:
+            version = version_pattern.search(changelog_line)
             if version is not None:
                 return "".join(version.group())
+        raise RuntimeError("Couldn't find a valid version in {}".format(changelog_file))
 
 
 if __name__ == "__main__":
