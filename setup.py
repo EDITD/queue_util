@@ -34,14 +34,14 @@ if __name__ == "__main__":
     setuptools.setup(
         name="queue_util",
         version=get_version(),
-        author="Sujay Mansingh",
-        author_email="sujay.mansingh@gmail.com",
+        author='EDITED devs',
+        author_email='dev@edited.com',
         packages=setuptools.find_packages(),
         scripts=[],
-        url="https://github.com/sujaymansingh/queue_util",
+        url="https://github.com/EDITD/queue_util",
         license="LICENSE.txt",
         description="A set of utilities for consuming (and producing) from a rabbitmq queue",
-        long_description="View the github page (https://github.com/sujaymansingh/queue_util) for more details.",
+        long_description="View the github page (https://github.com/EDITD/queue_util) for more details.",
         install_requires=REQUIREMENTS,
         extras_require={
             'fast': (
