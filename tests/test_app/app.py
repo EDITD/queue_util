@@ -33,7 +33,7 @@ def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
     consumer_thread.start()
 
     while time.time() < start_time + 30.0 and len(received) < len(messages):
-        pass
+        time.sleep(0.1)
 
     consumer.terminate = True
     consumer_thread.join(timeout=10.0)
