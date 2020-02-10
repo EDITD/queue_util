@@ -1,27 +1,34 @@
 """Allow the ability to connect and publish to a queue.
 """
-import json
 import logging
 import time
 
 import kombu
-import requests
 import six
 
 
 class Producer(object):
 
-    def __init__(self, dest_queue_name, rabbitmq_host, serializer=None, compression=None):
+    def __init__(self, dest_queue_name, rabbitmq_host, rabbitmq_port=None,
+                 serializer=None, compression=None,
+                 userid=None, password=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
 
         self.rabbitmq_host = rabbitmq_host
+        self.rabbitmq_port = rabbitmq_port
         self.dest_queue_name = dest_queue_name
 
         # Connect to the queue.
-        #
-        broker = kombu.BrokerConnection(rabbitmq_host)
+        connect_kwargs = {}
+        if userid is not None:
+            connect_kwargs["userid"] = userid
+        if password is not None:
+            connect_kwargs["password"] = password
+        if rabbitmq_port is not None:
+            connect_kwargs["port"] = rabbitmq_port
+        broker = kombu.BrokerConnection(rabbitmq_host, **connect_kwargs)
         self.dest_queue = broker.SimpleQueue(dest_queue_name, serializer=serializer, compression=compression)
 
     def put(self, item):
@@ -60,24 +67,9 @@ class Producer(object):
             time.sleep(delay_in_seconds)
 
             # Now that we have completed one batch, we need to wait.
-            #
             max_size = resume_threshold * batch_size
-            num_messages = get_num_messages(self.rabbitmq_host, self.dest_queue_name)
+            num_messages = self.dest_queue.qsize()
             while num_messages >= max_size:
                 logging.debug("Current queue size = {0}, waiting until size <= {1}".format(num_messages, max_size))
                 time.sleep(delay_in_seconds)
-                num_messages = get_num_messages(self.rabbitmq_host, self.dest_queue_name)
-
-
-def get_num_messages(rabbitmq_host, queue_name, port=15672, vhost="%2F", auth=None):
-    """A (very!) approximate attempt to get the number of messages in a queue.
-    It uses the rabbitmq http API (so make sure that is installed).
-    """
-    if not auth:
-        auth = ("guest", "guest")
-    url = "http://{0}:{1}/api/queues/{2}/{3}".format(rabbitmq_host, port, vhost, queue_name)
-
-    response = requests.get(url, auth=auth)
-
-    queue_data = json.loads(response.content)
-    return queue_data["messages"]
+                num_messages = self.dest_queue.qsize()

@@ -1,6 +1,11 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
 
+## v3.0.0
+- Upgrade to Kombu 4, msgpack 0.5, statsd 3
+- Use tox for testing with multiple Python versions
+- Add integration tests
+
 ## v2.2.1
 - Update `unicode-msgpack` serialiser to date-aware implementation
 - Ignore unicode_errors on read and write with `unicode-msgpack`
