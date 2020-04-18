@@ -32,16 +32,17 @@ if __name__ == "__main__":
         sys.exit(0)
 
     setuptools.setup(
-        name="queue_util",
+        name='queue_util',
         version=get_version(),
         author='EDITED devs',
         author_email='dev@edited.com',
         packages=setuptools.find_packages(),
         scripts=[],
-        url="https://github.com/EDITD/queue_util",
-        license="LICENSE.txt",
-        description="A set of utilities for consuming (and producing) from a rabbitmq queue",
-        long_description="View the github page (https://github.com/EDITD/queue_util) for more details.",
+        url='https://github.com/EDITD/queue_util',
+        license='file: LICENSE.txt',
+        description='A set of utilities for consuming (and producing) from a rabbitmq queue',
+        long_description='file: README.md',
+        long_description_content_type='text/markdown',
         install_requires=REQUIREMENTS,
         extras_require={
             'dev': (
@@ -49,4 +50,22 @@ if __name__ == "__main__":
                 'docker>=4.1.0,<4.2',
             ),
         },
+        python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
+        classifiers=[
+            'Development Status :: 5 - Production/Stable',
+            'Intended Audience :: Developers',
+            'Intended Audience :: Information Technology',
+            'License :: OSI Approved :: MIT License',
+            'Operating System :: OS Independent',
+            'Programming Language :: Python',
+            'Programming Language :: Python :: 2',
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8',
+            'Topic :: Software Development :: Libraries :: Application Frameworks',
+            'Topic :: Software Development :: Libraries :: Python Modules',
+        ],
     )
