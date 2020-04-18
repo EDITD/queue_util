@@ -15,3 +15,4 @@ deploy:
   # https://github.com/travis-ci/travis.rb/issues/687
   on:
     tags: true
+  skip_existing: true
