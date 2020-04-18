@@ -1,6 +1,11 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
 
+## v3.0.1
+- Update meta information
+- Add labels in README
+- Migrate to TravisCI for build and release
+
 ## v3.0.0
 - Upgrade to Kombu 4, msgpack 0.5, statsd 3
 - Use tox for testing with multiple Python versions
