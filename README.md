@@ -9,6 +9,10 @@ A set of utilities for consuming (and producing) from a rabbitmq queue
 
 # Development
 ## Testing
+You will need to have:
+* a local `Docker` service
+* `tox` installed (globally available)
+* All supported versions of python installed ([Pyenv](https://github.com/pyenv/pyenv) is highly recommended)
 ```
 tox [-p auto]
 ```
