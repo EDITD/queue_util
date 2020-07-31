@@ -141,7 +141,7 @@ class Consumer(object):
             destination_queue = self.get_queue(queue_name, serializer, compression)
             destination_queue.put(data)
 
-    def run_forever(self, wait_timeout_seconds=None):
+    def run_forever(self, wait_timeout_seconds=None, **kwargs):
         """Keep running (unless we get a Ctrl-C).
         """
         while not self.is_terminated():
@@ -153,7 +153,7 @@ class Consumer(object):
                 data = message.payload
 
                 with stats.time_block(self.statsd_client):
-                    new_messages = self.handle_data(data)
+                    new_messages = self.handle_data(data, **kwargs)
 
                 # Must be successful if we have reached here.
                 stats.mark_successful_job(self.statsd_client)
@@ -195,7 +195,7 @@ class Consumer(object):
                 #
                 message.ack()
 
-    def batched_run_forever(self, size, wait_timeout_seconds=5):
+    def batched_run_forever(self, size, wait_timeout_seconds=5, **kwargs):
         """This will take messages off the queue and put them in a buffer.
         Once the buffer reaches the given size, handle_data is called for the
         entire buffer. (So handle_data must be able to handle a list.)
@@ -229,7 +229,7 @@ class Consumer(object):
                 if len(buffer) >= size or (buffer and queue_was_empty):
                     try:
                         with stats.time_block(self.statsd_client):
-                            new_messages = self.handle_batch(buffer)
+                            new_messages = self.handle_batch(buffer, **kwargs)
 
                         stats.mark_successful_job(self.statsd_client)
                         self.post_handle_data()
@@ -259,14 +259,14 @@ class Consumer(object):
                 if new_messages:
                     self.queue_new_messages(new_messages)
 
-    def handle_batch(self, messages):
+    def handle_batch(self, messages, **kwargs):
         """Call handle_data on a batch of messages.
         All messages will be ack'd only if the entire function succeeds.
         Otherwise all messages will be rejected/requeued.
         """
         new_messages = []
         try:
-            new_messages = self.handle_data([message.payload for message in messages])
+            new_messages = self.handle_data([message.payload for message in messages], **kwargs)
             # If we are here, then handle_data ran without any erroes.
             for message in messages:
                 message.ack()
