@@ -1,6 +1,9 @@
 # Changelog
 ### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
 
+## v3.1.0
+- Ability to pass kwargs in to handle_data operations
+
 ## v3.0.1
 - Update meta information
 - Add labels in README
