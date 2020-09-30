@@ -8,6 +8,9 @@ from threading import Thread
 from queue_util import Consumer, Producer
 
 
+MAX_RUN_TIME = 180.0
+
+
 def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
     messages = [i for i in range(42, 690)]
 
@@ -32,8 +35,8 @@ def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
     start_time = time.time()
     consumer_thread.start()
 
-    while time.time() < start_time + 30.0 and len(received) < len(messages):
-        time.sleep(0.1)
+    while time.time() < start_time + MAX_RUN_TIME and len(received) < len(messages):
+        time.sleep(MAX_RUN_TIME/100.0)
 
     consumer.terminate = True
     consumer_thread.join(timeout=10.0)
