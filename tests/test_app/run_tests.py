@@ -40,6 +40,7 @@ def main():
     RABBIT_QUEUE_NAME = 'queue_util_test_app'
 
     with rabbitmq_test_server() as rabbit_ports:
+        print("Rabbit open on {}".format(rabbit_ports))
         return app.main(RABBIT_QUEUE_NAME, rabbit_host=RABBIT_HOST, rabbit_port=rabbit_ports[0])
 
 
