@@ -155,7 +155,7 @@ class Consumer(object):
                 except queue.Empty:
                     continue
                 except Exception as e:
-                    logging.exception("Exception getting message from Rabbit", str(e))
+                    logging.exception("Exception getting message from Rabbit (%s)", e)
                     break
 
                 with stats.time_block(self.statsd_client):
