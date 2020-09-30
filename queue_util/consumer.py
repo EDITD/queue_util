@@ -66,19 +66,21 @@ class Consumer(object):
             self.connect_kwargs["password"] = password
         if rabbitmq_port is not None:
             self.connect_kwargs["port"] = rabbitmq_port
-
-        self.broker = kombu.BrokerConnection(self.rabbitmq_host, **self.connect_kwargs)
-        self.source_queue = self.get_queue(
-            self.queue_name,
-            serializer=self.serializer,
-            compression=self.compression,
-        )
+        self._connect()
 
         if statsd_host:
             prefix = self.get_full_statsd_prefix(statsd_prefix, self.queue_name)
             self.statsd_client = statsd.StatsClient(statsd_host, prefix=prefix)
         else:
             self.statsd_client = None
+
+    def _connect(self):
+        self.broker = kombu.BrokerConnection(self.rabbitmq_host, **self.connect_kwargs)
+        self.source_queue = self.get_queue(
+            self.queue_name,
+            serializer=self.serializer,
+            compression=self.compression,
+        )
 
     def get_queue(self, queue_name, serializer="default", compression="default"):
         kwargs = {}
