@@ -149,51 +149,42 @@ class Consumer(object):
             try:
                 self.wait_if_paused()
 
-                message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
-                data = message.payload
+                try:
+                    message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
+                    data = message.payload
+                except queue.Empty:
+                    continue
+                except Exception as e:
+                    logging.exception("Exception getting message from Rabbit", str(e))
+                    break
 
                 with stats.time_block(self.statsd_client):
-                    new_messages = self.handle_data(data, **kwargs)
+                    try:
+                        new_messages = self.handle_data(data, **kwargs)
+                        if new_messages:
+                            self.queue_new_messages(new_messages)
+                    except Exception:
+                        logging.exception("Exception handling data")
 
-                # Must be successful if we have reached here.
+                        if self.handle_exception is not None:
+                            self.handle_exception()
+
+                        if self.requeue:
+                            message.requeue()
+                        elif self.reject:
+                            message.reject()
+
+                        stats.mark_failed_job(self.statsd_client)
+
+                message.ack()
+
                 stats.mark_successful_job(self.statsd_client)
 
                 self.post_handle_data()
 
-            except queue.Empty:
-                pass
-
             except KeyboardInterrupt:
                 logging.info("Caught Ctrl-C. Byee!")
-                # Break out of our loop.
-                #
                 break
-
-            except:
-                # Keep going, but don't ack the message.
-                # Also, log the exception.
-                logging.exception("Exception handling data")
-
-                if self.handle_exception is not None:
-                    self.handle_exception()
-
-                if message:
-                    if self.requeue:
-                        message.requeue()
-                    elif self.reject:
-                        message.reject()
-
-                stats.mark_failed_job(self.statsd_client)
-
-            else:
-                # Queue up the new messages (if any).
-                #
-                if new_messages:
-                    self.queue_new_messages(new_messages)
-
-                # We're done with the original message.
-                #
-                message.ack()
 
     def batched_run_forever(self, size, wait_timeout_seconds=5, **kwargs):
         """This will take messages off the queue and put them in a buffer.
