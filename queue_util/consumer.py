@@ -42,38 +42,40 @@ class Consumer(object):
                  statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None,
                  dont_requeue=None, reject=None, handle_exception=None,
                  userid=None, password=None):
+        self.queue_name = source_queue_name
+        self.handle_data = handle_data
+        self.rabbitmq_host = rabbitmq_host
         self.serializer = serializer
         self.compression = compression
-        self.queue_cache = {}
-
         self.pause_delay = pause_delay
-        self.terminate = False
-
-        # Connect to the source queue.
-        connect_kwargs = {}
-        if userid is not None:
-            connect_kwargs["userid"] = userid
-        if password is not None:
-            connect_kwargs["password"] = password
-        if rabbitmq_port is not None:
-            connect_kwargs["port"] = rabbitmq_port
-        self.broker = kombu.BrokerConnection(rabbitmq_host, **connect_kwargs)
-        self.source_queue = self.get_queue(source_queue_name, serializer=serializer, compression=compression)
-
-        # The handle_data method will be applied to each item in the queue.
-        #
-        self.handle_data = handle_data
-
         self.workerid = worker_id or workerid
+        self.handle_exception = handle_exception
 
         # If both True, requeue takes priority
         self.requeue = False if dont_requeue else True
         self.reject = True if reject else False
 
-        self.handle_exception = handle_exception
+        self.terminate = False
+        self._queue_cache = {}
+
+        # Connect to the source queue.
+        self.connect_kwargs = {}
+        if userid is not None:
+            self.connect_kwargs["userid"] = userid
+        if password is not None:
+            self.connect_kwargs["password"] = password
+        if rabbitmq_port is not None:
+            self.connect_kwargs["port"] = rabbitmq_port
+
+        self.broker = kombu.BrokerConnection(self.rabbitmq_host, **self.connect_kwargs)
+        self.source_queue = self.get_queue(
+            self.queue_name,
+            serializer=self.serializer,
+            compression=self.compression,
+        )
 
         if statsd_host:
-            prefix = self.get_full_statsd_prefix(statsd_prefix, source_queue_name)
+            prefix = self.get_full_statsd_prefix(statsd_prefix, self.queue_name)
             self.statsd_client = statsd.StatsClient(statsd_host, prefix=prefix)
         else:
             self.statsd_client = None
@@ -96,9 +98,9 @@ class Consumer(object):
         # different serializer/compression args.
         #
         cache_key = (queue_name, serializer, compression,)
-        if cache_key not in self.queue_cache:
-            self.queue_cache[cache_key] = self.broker.SimpleQueue(queue_name, **kwargs)
-        return self.queue_cache[cache_key]
+        if cache_key not in self._queue_cache:
+            self._queue_cache[cache_key] = self.broker.SimpleQueue(queue_name, **kwargs)
+        return self._queue_cache[cache_key]
 
     def post_handle_data(self):
         """This gets called after each item has been processed.
