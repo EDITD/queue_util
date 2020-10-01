@@ -76,6 +76,7 @@ class Consumer(object):
 
     def _connect(self):
         self.broker = kombu.BrokerConnection(self.rabbitmq_host, **self.connect_kwargs)
+        self._queue_cache.clear()
         self.source_queue = self.get_queue(
             self.queue_name,
             serializer=self.serializer,
@@ -159,16 +160,17 @@ class Consumer(object):
                 except queue.Empty:
                     continue
                 except Exception as e:
-                    logging.exception("Exception getting message from Rabbit (%s)", e)
-                    break
+                    logging.exception("Exception getting message: %s", e)
+                    self._connect()
+                    continue
 
                 with stats.time_block(self.statsd_client):
                     try:
                         new_messages = self.handle_data(data, **kwargs)
                         if new_messages:
                             self.queue_new_messages(new_messages)
-                    except Exception:
-                        logging.exception("Exception handling data")
+                    except Exception as e:
+                        logging.exception("Exception handling data: %s", e)
 
                         if self.handle_exception is not None:
                             self.handle_exception()
@@ -179,11 +181,17 @@ class Consumer(object):
                             message.reject()
 
                         stats.mark_failed_job(self.statsd_client)
+                        continue
 
-                message.ack()
+                try:
+                    message.ack()
+                except Exception as e:
+                    logging.exception("Exception acking message: %s", e)
+                    self._connect()
+                    stats.mark_failed_job(self.statsd_client)
+                    continue
 
                 stats.mark_successful_job(self.statsd_client)
-
                 self.post_handle_data()
 
             except KeyboardInterrupt:
