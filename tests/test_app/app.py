@@ -32,7 +32,8 @@ def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
         rabbit_queue_name,
         handle_data,
         rabbit_host,
-        rabbit_port
+        rabbit_port,
+        max_retries=10,
     )
     consumer_thread = Thread(target=consumer.run_forever, kwargs={'wait_timeout_seconds': 0.1})
 

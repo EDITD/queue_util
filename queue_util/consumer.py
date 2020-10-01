@@ -41,7 +41,7 @@ class Consumer(object):
                  serializer=None, compression=None, pause_delay=5,
                  statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None,
                  dont_requeue=None, reject=None, handle_exception=None,
-                 userid=None, password=None):
+                 userid=None, password=None, max_retries=None):
         self.queue_name = source_queue_name
         self.handle_data = handle_data
         self.rabbitmq_host = rabbitmq_host
@@ -50,6 +50,7 @@ class Consumer(object):
         self.pause_delay = pause_delay
         self.workerid = worker_id or workerid
         self.handle_exception = handle_exception
+        self.max_retries = max_retries
 
         # If both True, requeue takes priority
         self.requeue = False if dont_requeue else True
@@ -86,8 +87,6 @@ class Consumer(object):
     def get_queue(self, queue_name, serializer="default", compression="default"):
         kwargs = {}
 
-        # Use 'defaults' if no args were supplied for serializer/compression.
-        #
         serializer = self.serializer if serializer == "default" else serializer
         if serializer:
             kwargs["serializer"] = serializer
@@ -149,8 +148,8 @@ class Consumer(object):
     def run_forever(self, wait_timeout_seconds=None, **kwargs):
         """Keep running (unless we get a Ctrl-C).
         """
+        successive_failures = 0
         while not self.is_terminated():
-            message = None
             try:
                 self.wait_if_paused()
 
@@ -161,6 +160,9 @@ class Consumer(object):
                     continue
                 except Exception as e:
                     logging.exception("Exception getting message: %s", e)
+                    successive_failures += 1
+                    if self.max_retries is not None and successive_failures > self.max_retries:
+                        raise
                     self._connect()
                     continue
 
@@ -187,12 +189,16 @@ class Consumer(object):
                     message.ack()
                 except Exception as e:
                     logging.exception("Exception acking message: %s", e)
+                    successive_failures += 1
+                    if self.max_retries is not None and successive_failures > self.max_retries:
+                        raise
                     self._connect()
                     stats.mark_failed_job(self.statsd_client)
                     continue
 
                 stats.mark_successful_job(self.statsd_client)
                 self.post_handle_data()
+                successive_failures = 0
 
             except KeyboardInterrupt:
                 logging.info("Caught Ctrl-C. Byee!")
