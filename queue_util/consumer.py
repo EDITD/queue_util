@@ -212,9 +212,9 @@ class Consumer(object):
         Otherwise all messages are requeued/rejected.
         """
         buffer = []
+        successive_failures = 0
 
         while not self.is_terminated():
-            new_messages = []
             try:
                 self.wait_if_paused()
 
@@ -222,12 +222,17 @@ class Consumer(object):
                 message = None
 
                 try:
-                    # We need to have a timeout. Otherwise if we had no more
-                    # messages coming in, but len(buffer) < size, then the
-                    # buffer would never get processed!
                     message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
                 except queue.Empty:
                     queue_was_empty = True
+                    logging.warning("Empty")
+                except Exception as e:
+                    logging.exception("Exception getting message: %s", e)
+                    successive_failures += 1
+                    if self.max_retries is not None and successive_failures > self.max_retries:
+                        raise
+                    self._connect()
+                    continue
 
                 if message:
                     buffer.append(message)
@@ -236,60 +241,49 @@ class Consumer(object):
                 # 1. it has reached the given size or
                 # 2. we drained the queue, but the buffer is smaller than size
                 if len(buffer) >= size or (buffer and queue_was_empty):
-                    try:
-                        with stats.time_block(self.statsd_client):
-                            new_messages = self.handle_batch(buffer, **kwargs)
+                    with stats.time_block(self.statsd_client):
+                        try:
+                            new_messages = self.handle_data(
+                                [message.payload for message in buffer],
+                                **kwargs
+                            )
+                            if new_messages:
+                                self.queue_new_messages(new_messages)
+                        except Exception as e:
+                            logging.exception("Exception handling batch: %s", e)
 
-                        stats.mark_successful_job(self.statsd_client)
-                        self.post_handle_data()
-                    except KeyboardInterrupt as ki:
-                        # Raise this for the outer try to handle.
-                        raise ki
-                    except:
-                        logging.exception("Exception handling batch")
-                        if self.handle_exception is not None:
-                            self.handle_exception()
+                            for message in buffer:
+                                if self.requeue:
+                                    message.requeue()
+                                elif self.reject:
+                                    message.reject()
+
+                            if self.handle_exception is not None:
+                                self.handle_exception()
+
+                            stats.mark_failed_job(self.statsd_client)
+                            continue
+
+                    try:
+                        for message in buffer:
+                            message.ack()
+                    except Exception as e:
+                        logging.exception("Exception acking batch: %s", e)
+                        successive_failures += 1
+                        if self.max_retries is not None and successive_failures > self.max_retries:
+                            raise
+                        self._connect()
                         stats.mark_failed_job(self.statsd_client)
-                    finally:
-                        # If all went well then we have ack'd the messages.
-                        # If not, we have requeued or rejected them.
-                        # Either way we are done with the buffer.
-                        buffer = []
+                        continue
+
+                    stats.mark_successful_job(self.statsd_client)
+                    self.post_handle_data()
+                    buffer = []
+                    successive_failures = 0
 
             except KeyboardInterrupt:
                 logging.info("Caught Ctrl-C. Byee!")
                 break
-
-            except:
-                # When could this happen? Perhaps while waiting?
-                logging.exception("Exception elsewhere in batched_run_forever")
-
-            else:
-                if new_messages:
-                    self.queue_new_messages(new_messages)
-
-    def handle_batch(self, messages, **kwargs):
-        """Call handle_data on a batch of messages.
-        All messages will be ack'd only if the entire function succeeds.
-        Otherwise all messages will be rejected/requeued.
-        """
-        new_messages = []
-        try:
-            new_messages = self.handle_data([message.payload for message in messages], **kwargs)
-            # If we are here, then handle_data ran without any erroes.
-            for message in messages:
-                message.ack()
-        except Exception as e:
-            # There was a problem so we reject or requeue the whole batch.
-            for message in messages:
-                if self.requeue:
-                    message.requeue()
-                elif self.reject:
-                    message.reject()
-            # Now that we're done with the messages, handle the exception
-            raise e
-
-        return new_messages
 
     def wait_if_paused(self):
         """Check to see whether the current process should be paused, and
