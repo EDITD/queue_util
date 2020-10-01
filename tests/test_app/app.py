@@ -8,7 +8,7 @@ from threading import Thread
 from queue_util import Consumer, Producer
 
 
-MAX_RUN_TIME = 180.0
+MAX_RUN_TIME = 120.0
 
 
 def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
@@ -23,6 +23,8 @@ def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
     for message in messages:
         producer.put(message)
 
+    del producer
+
     received = []
 
     def handle_data(item):
@@ -35,20 +37,29 @@ def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
         rabbit_port,
         max_retries=10,
     )
-    consumer_thread = Thread(target=consumer.run_forever, kwargs={'wait_timeout_seconds': 0.1})
+    consumer_thread = Thread(
+        target=consumer.run_forever,
+        kwargs={'wait_timeout_seconds': 0.1},
+    )
 
     start_time = time.time()
     consumer_thread.start()
 
-    while time.time() < start_time + MAX_RUN_TIME and len(received) < len(messages):
+    while time.time() < start_time + MAX_RUN_TIME and len(received) < len(messages) and consumer_thread.is_alive():
         time.sleep(MAX_RUN_TIME/100.0)
 
     consumer.terminate = True
     consumer_thread.join(timeout=10.0)
     if consumer_thread.is_alive():
-        raise RuntimeError("Consumer still running, received {0} items".format(len(received)))
-    if len(received) < len(messages):
-        raise RuntimeError("Consumer didn't get it all, received {0} items".format(len(received)))
+        raise RuntimeError("Consumer still running, received {0} items ({1} unique)".format(
+            len(received),
+            len(set(received)),
+        ))
+    if len(set(received)) < len(messages):
+        raise RuntimeError("Consumer didn't get it all, received {0} items ({1} unique)".format(
+            len(received),
+            len(set(received))
+        ))
     consumer_thread.join()
 
 
