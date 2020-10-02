@@ -12,15 +12,6 @@ class Producer(object):
     def __init__(self, dest_queue_name, rabbitmq_host, rabbitmq_port=None,
                  serializer=None, compression=None,
                  userid=None, password=None):
-        self.serializer = serializer
-        self.compression = compression
-        self.queue_cache = {}
-
-        self.rabbitmq_host = rabbitmq_host
-        self.rabbitmq_port = rabbitmq_port
-        self.dest_queue_name = dest_queue_name
-
-        # Connect to the queue.
         connect_kwargs = {}
         if userid is not None:
             connect_kwargs["userid"] = userid
