@@ -170,7 +170,7 @@ class Consumer(object):
                 with stats.time_block(self.statsd_client):
                     try:
                         new_messages = self.handle_data(data, **kwargs)
-                        if new_messages:
+                        if new_messages is not None:
                             self.queue_new_messages(new_messages)
                     except Exception as e:
                         logging.exception("Exception handling data: %s", e)
@@ -248,7 +248,7 @@ class Consumer(object):
                                 [message.payload for message in buffer],
                                 **kwargs
                             )
-                            if new_messages:
+                            if new_messages is not None:
                                 self.queue_new_messages(new_messages)
                         except Exception as e:
                             logging.exception("Exception handling batch: %s", e)
