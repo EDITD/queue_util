@@ -175,7 +175,7 @@ class Consumer(object):
                     except Exception as e:
                         logging.exception("Exception handling data: %s", e)
 
-                        if self.handle_exception is not None:
+                        if self.handle_exception:
                             self.handle_exception()
 
                         if self.requeue:
@@ -259,7 +259,7 @@ class Consumer(object):
                                 elif self.reject:
                                     message.reject()
 
-                            if self.handle_exception is not None:
+                            if self.handle_exception:
                                 self.handle_exception()
 
                             stats.mark_failed_job(self.statsd_client)
