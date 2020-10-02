@@ -10,21 +10,21 @@ import six
 from kombu.serialization import register
 
 
-DATE_FORMAT = "%Y%m%dT%H:%M:%S.%f"
-MESSAGE_CONTENT_TYPE = "application/x-unicode-msgpack-with-dates"
-MESSAGE_CONTENT_ENCODING = "binary"
+DATE_FORMAT = '%Y%m%dT%H:%M:%S.%f'
+MESSAGE_CONTENT_TYPE = 'application/x-unicode-msgpack-with-dates'
+MESSAGE_CONTENT_ENCODING = 'binary'
 
 
 def decode_datetime(obj):
-    if b"__datetime__" in obj:
+    if b'__datetime__' in obj:
         # This must have been produced by python2.
-        obj = datetime.strptime(obj[b"as_str"].decode("utf-8"), DATE_FORMAT)
-    elif "__datetime__" in obj:
-        as_str = obj["as_str"]
+        obj = datetime.strptime(obj[b'as_str'].decode('utf-8'), DATE_FORMAT)
+    elif '__datetime__' in obj:
+        as_str = obj['as_str']
         # We are not done yet!! Just because the keys are unicode, doesn't mean that the
         # values are!!
         if six.PY3 and isinstance(as_str, six.binary_type):
-            as_str = as_str.decode("utf-8")
+            as_str = as_str.decode('utf-8')
         obj = datetime.strptime(as_str, DATE_FORMAT)
 
     return obj
@@ -41,8 +41,8 @@ def encode_datetime(obj):
             # We are in python2! But we want to output unicode.unicode_literals will take care
             # of the keys, but strftime returns a bytestring in python2.
             as_bytes = obj.strftime(DATE_FORMAT)
-            as_str = as_bytes.decode("utf-8")
-        return {"__datetime__": True, "as_str": as_str}
+            as_str = as_bytes.decode('utf-8')
+        return {'__datetime__': True, 'as_str': as_str}
 
     return obj
 
@@ -51,7 +51,7 @@ def pack(s):
     return msgpack.packb(
         s,
         use_bin_type=True,
-        unicode_errors="ignore",
+        unicode_errors='ignore',
         default=encode_datetime,
     )
 
@@ -59,14 +59,14 @@ def pack(s):
 def unpack(s):
     return msgpack.unpackb(
         s,
-        encoding="utf-8",
-        unicode_errors="ignore",
+        encoding='utf-8',
+        unicode_errors='ignore',
         object_hook=decode_datetime,
     )
 
 
 register(
-    "unicode-msgpack-with-dates",
+    'unicode-msgpack-with-dates',
     pack,
     unpack,
     content_type=MESSAGE_CONTENT_TYPE,
@@ -80,5 +80,5 @@ register(
     pack,
     unpack,
     content_type='application/x-unicode-msgpack',
-    content_encoding='binary'
+    content_encoding='binary',
 )

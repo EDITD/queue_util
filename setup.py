@@ -1,32 +1,33 @@
 import re
-import setuptools
 import sys
+
+import setuptools
 
 
 REQUIREMENTS = [
-    "kombu>=4.5.0,<5.0",
-    "six>=1.14.0,<2",
-    "msgpack-python>=0.5.6,<0.6",
-    "statsd>=3.3.0,<4",
+    'kombu>=4.5.0,<5.0',
+    'six>=1.14.0,<2',
+    'msgpack-python>=0.5.6,<0.6',
+    'statsd>=3.3.0,<4',
 ]
 
 # Regex matching version pattern
 # (3 numerical values separated by `.`, semver style, followed by an optional pre-release marker)
-version_pattern = re.compile(r"\d+\.\d+\.\d+([.-][\w_-]+)?")
+version_pattern = re.compile(r'\d+\.\d+\.\d+([.-][\w_-]+)?')
 
 
 def get_version():
-    changelog_file = "CHANGELOG.md"
-    with open(changelog_file, "r") as changelog:
+    changelog_file = 'CHANGELOG.md'
+    with open(changelog_file, 'r') as changelog:
         for changelog_line in changelog:
             version = version_pattern.search(changelog_line)
             if version is not None:
-                return "".join(version.group())
+                return ''.join(version.group())
         raise RuntimeError("Couldn't find a valid version in {}".format(changelog_file))
 
 
-if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "requirements":
+if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] == 'requirements':
         for req in REQUIREMENTS:
             print(req)
         sys.exit(0)
@@ -48,6 +49,12 @@ if __name__ == "__main__":
             'dev': (
                 'tox>=3.14.0',
                 'docker>=4.1.0,<4.2',
+                'mock>=3.0.0,<4.0; python_version<"3.6"',
+                'flake8>=3.8.3,<4.0',
+                'flake8-quotes>=3.2.0,<4.0',
+                'flake8-commas>=2.0.0,<3.0',
+                'flake8-import-order>=0.18.1,<0.19',
+                'flake8-colors>=0.1.6,<0.2',
             ),
         },
         python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',

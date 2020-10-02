@@ -18,7 +18,7 @@ def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
         rabbit_queue_name,
         rabbit_host,
         rabbit_port,
-        serializer="json"
+        serializer='json',
     )
     for message in messages:
         producer.put(message)
@@ -45,20 +45,24 @@ def main(rabbit_queue_name, rabbit_host='127.0.0.1', rabbit_port=5672):
     start_time = time.time()
     consumer_thread.start()
 
-    while time.time() < start_time + MAX_RUN_TIME and len(received) < len(messages) and consumer_thread.is_alive():
+    while (
+            time.time() < start_time + MAX_RUN_TIME and
+            len(received) < len(messages) and
+            consumer_thread.is_alive()
+    ):
         time.sleep(MAX_RUN_TIME/100.0)
 
     consumer.terminate = True
     consumer_thread.join(timeout=10.0)
     if consumer_thread.is_alive():
-        raise RuntimeError("Consumer still running, received {0} items ({1} unique)".format(
+        raise RuntimeError('Consumer still running, received {0} items ({1} unique)'.format(
             len(received),
             len(set(received)),
         ))
     if len(set(received)) < len(messages):
         raise RuntimeError("Consumer didn't get it all, received {0} items ({1} unique)".format(
             len(received),
-            len(set(received))
+            len(set(received)),
         ))
     consumer_thread.join()
 
