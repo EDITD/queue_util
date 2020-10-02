@@ -220,7 +220,6 @@ class Consumer(object):
                 self.wait_if_paused()
 
                 queue_was_empty = False
-                message = None
 
                 try:
                     message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
@@ -234,8 +233,7 @@ class Consumer(object):
                         raise
                     self._connect()
                     continue
-
-                if message:
+                else:
                     buffer.append(message)
 
                 # We proceed to handle the buffer if
