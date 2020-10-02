@@ -41,7 +41,7 @@ class Consumer(object):
                  serializer=None, compression=None, pause_delay=5,
                  statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None,
                  dont_requeue=None, reject=None, handle_exception=None,
-                 userid=None, password=None, max_retries=None):
+                 userid=None, password=None, max_retries=None, max_queue_priority=None):
         self.queue_name = source_queue_name
         self.handle_data = handle_data
         self.rabbitmq_host = rabbitmq_host
@@ -51,6 +51,7 @@ class Consumer(object):
         self.workerid = worker_id or workerid
         self.handle_exception = handle_exception
         self.max_retries = max_retries
+        self.max_queue_priority = max_queue_priority
 
         # If both True, requeue takes priority
         self.requeue = False if dont_requeue else True
@@ -82,9 +83,11 @@ class Consumer(object):
             self.queue_name,
             serializer=self.serializer,
             compression=self.compression,
+            max_priority=self.max_queue_priority,
         )
 
-    def get_queue(self, queue_name, serializer="default", compression="default"):
+    def get_queue(self, queue_name, serializer='default', compression='default',
+                  max_priority='default'):
         kwargs = {}
 
         serializer = self.serializer if serializer == "default" else serializer
@@ -94,6 +97,10 @@ class Consumer(object):
         compression = self.compression if compression == "default" else compression
         if compression:
             kwargs["compression"] = compression
+
+        max_priority = self.max_queue_priority if max_priority == 'default' else max_priority
+        if max_priority is not None:
+            kwargs['max_priority'] = max_priority
 
         # The cache key is the name and connection args.
         # This is so that (if needed) a fresh connection can be made with

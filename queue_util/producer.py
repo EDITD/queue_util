@@ -11,7 +11,7 @@ class Producer(object):
 
     def __init__(self, dest_queue_name, rabbitmq_host, rabbitmq_port=None,
                  serializer=None, compression=None,
-                 userid=None, password=None):
+                 userid=None, password=None, max_queue_priority=None):
         self.serializer = serializer
         self.compression = compression
         self.queue_cache = {}
@@ -29,14 +29,24 @@ class Producer(object):
         if rabbitmq_port is not None:
             connect_kwargs["port"] = rabbitmq_port
         broker = kombu.BrokerConnection(rabbitmq_host, **connect_kwargs)
-        self.dest_queue = broker.SimpleQueue(dest_queue_name, serializer=serializer, compression=compression)
 
-    def put(self, item):
+        queue_kwargs = {}
+        if serializer is not None:
+            queue_kwargs['serializer'] = serializer
+        if compression is not None:
+            queue_kwargs['compression'] = compression
+        if max_queue_priority is not None:
+            queue_kwargs['max_priority'] = max_queue_priority
+        self.dest_queue = broker.SimpleQueue(dest_queue_name, **queue_kwargs)
+
+    def put(self, item, **kwargs):
         """Put one item onto the queue.
         """
-        self.dest_queue.put(item)
+        self.dest_queue.put(item, **kwargs)
 
-    def buffered_put(self, input_iter, batch_size, resume_threshold=0.1, delay_in_seconds=5.0):
+    def buffered_put(self, input_iter, batch_size,
+                     resume_threshold=0.1, delay_in_seconds=5.0,
+                     **put_kwargs):
         """Given an input iterator, keep adding batches of items to the
         destination queue.
         After each batch, wait for the queue size to drop to a certain level
@@ -51,7 +61,7 @@ class Producer(object):
             try:
                 logging.debug("Starting batch (batch_size={0})".format(batch_size))
                 for i in range(batch_size):
-                    self.put(six.next(input_iter))
+                    self.put(six.next(input_iter), **put_kwargs)
                     num_enqueued += 1
                 logging.debug("Batch done. {0} items enqueued so far".format(num_enqueued))
             except StopIteration:
