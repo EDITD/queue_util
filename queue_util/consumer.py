@@ -225,7 +225,6 @@ class Consumer(object):
                     message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
                 except queue.Empty:
                     queue_was_empty = True
-                    logging.warning("Empty")
                 except Exception as e:
                     logging.exception("Exception getting message: %s", e)
                     successive_failures += 1
