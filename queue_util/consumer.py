@@ -23,6 +23,7 @@ If used with batched_run_forever, handle_data is called with a list of payloads
 i.e.
     self.handle_data([message.payload for message in current_batch])
 """
+import collections
 import logging
 import os
 import socket
@@ -211,7 +212,7 @@ class Consumer(object):
         If handle_data doesn't throw an exception, all messages are ack'd.
         Otherwise all messages are requeued/rejected.
         """
-        buffer = []
+        buffer = collections.deque()
         successive_failures = 0
 
         while not self.is_terminated():
@@ -278,7 +279,7 @@ class Consumer(object):
 
                     stats.mark_successful_job(self.statsd_client)
                     self.post_handle_data()
-                    buffer = []
+                    buffer.clear()
                     successive_failures = 0
 
             except KeyboardInterrupt:
