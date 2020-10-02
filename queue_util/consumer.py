@@ -41,48 +41,52 @@ class Consumer(object):
                  serializer=None, compression=None, pause_delay=5,
                  statsd_host=None, statsd_prefix="queue_util", workerid=None, worker_id=None,
                  dont_requeue=None, reject=None, handle_exception=None,
-                 userid=None, password=None):
+                 userid=None, password=None, max_retries=None):
+        self.queue_name = source_queue_name
+        self.handle_data = handle_data
+        self.rabbitmq_host = rabbitmq_host
         self.serializer = serializer
         self.compression = compression
-        self.queue_cache = {}
-
         self.pause_delay = pause_delay
-        self.terminate = False
-
-        # Connect to the source queue.
-        connect_kwargs = {}
-        if userid is not None:
-            connect_kwargs["userid"] = userid
-        if password is not None:
-            connect_kwargs["password"] = password
-        if rabbitmq_port is not None:
-            connect_kwargs["port"] = rabbitmq_port
-        self.broker = kombu.BrokerConnection(rabbitmq_host, **connect_kwargs)
-        self.source_queue = self.get_queue(source_queue_name, serializer=serializer, compression=compression)
-
-        # The handle_data method will be applied to each item in the queue.
-        #
-        self.handle_data = handle_data
-
         self.workerid = worker_id or workerid
+        self.handle_exception = handle_exception
+        self.max_retries = max_retries
 
         # If both True, requeue takes priority
         self.requeue = False if dont_requeue else True
         self.reject = True if reject else False
 
-        self.handle_exception = handle_exception
+        self.terminate = False
+        self._queue_cache = {}
+
+        # Connect to the source queue.
+        self.connect_kwargs = {}
+        if userid is not None:
+            self.connect_kwargs["userid"] = userid
+        if password is not None:
+            self.connect_kwargs["password"] = password
+        if rabbitmq_port is not None:
+            self.connect_kwargs["port"] = rabbitmq_port
+        self._connect()
 
         if statsd_host:
-            prefix = self.get_full_statsd_prefix(statsd_prefix, source_queue_name)
+            prefix = self.get_full_statsd_prefix(statsd_prefix, self.queue_name)
             self.statsd_client = statsd.StatsClient(statsd_host, prefix=prefix)
         else:
             self.statsd_client = None
 
+    def _connect(self):
+        self.broker = kombu.BrokerConnection(self.rabbitmq_host, **self.connect_kwargs)
+        self._queue_cache.clear()
+        self.source_queue = self.get_queue(
+            self.queue_name,
+            serializer=self.serializer,
+            compression=self.compression,
+        )
+
     def get_queue(self, queue_name, serializer="default", compression="default"):
         kwargs = {}
 
-        # Use 'defaults' if no args were supplied for serializer/compression.
-        #
         serializer = self.serializer if serializer == "default" else serializer
         if serializer:
             kwargs["serializer"] = serializer
@@ -96,9 +100,9 @@ class Consumer(object):
         # different serializer/compression args.
         #
         cache_key = (queue_name, serializer, compression,)
-        if cache_key not in self.queue_cache:
-            self.queue_cache[cache_key] = self.broker.SimpleQueue(queue_name, **kwargs)
-        return self.queue_cache[cache_key]
+        if cache_key not in self._queue_cache:
+            self._queue_cache[cache_key] = self.broker.SimpleQueue(queue_name, **kwargs)
+        return self._queue_cache[cache_key]
 
     def post_handle_data(self):
         """This gets called after each item has been processed.
@@ -144,56 +148,61 @@ class Consumer(object):
     def run_forever(self, wait_timeout_seconds=None, **kwargs):
         """Keep running (unless we get a Ctrl-C).
         """
+        successive_failures = 0
         while not self.is_terminated():
-            message = None
             try:
                 self.wait_if_paused()
 
-                message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
-                data = message.payload
+                try:
+                    message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
+                    data = message.payload
+                except queue.Empty:
+                    continue
+                except Exception as e:
+                    logging.exception("Exception getting message: %s", e)
+                    successive_failures += 1
+                    if self.max_retries is not None and successive_failures > self.max_retries:
+                        raise
+                    self._connect()
+                    continue
 
                 with stats.time_block(self.statsd_client):
-                    new_messages = self.handle_data(data, **kwargs)
+                    try:
+                        new_messages = self.handle_data(data, **kwargs)
+                        if new_messages:
+                            self.queue_new_messages(new_messages)
+                    except Exception as e:
+                        logging.exception("Exception handling data: %s", e)
 
-                # Must be successful if we have reached here.
+                        if self.handle_exception is not None:
+                            self.handle_exception()
+
+                        if self.requeue:
+                            message.requeue()
+                        elif self.reject:
+                            message.reject()
+
+                        stats.mark_failed_job(self.statsd_client)
+                        continue
+
+                try:
+                    message.ack()
+                except Exception as e:
+                    logging.exception("Exception acking message: %s", e)
+                    successive_failures += 1
+                    if self.max_retries is not None and successive_failures > self.max_retries:
+                        raise
+                    self._connect()
+                    stats.mark_failed_job(self.statsd_client)
+                    continue
+
                 stats.mark_successful_job(self.statsd_client)
-
                 self.post_handle_data()
-
-            except queue.Empty:
-                pass
+                successive_failures = 0
 
             except KeyboardInterrupt:
                 logging.info("Caught Ctrl-C. Byee!")
-                # Break out of our loop.
-                #
                 break
-
-            except:
-                # Keep going, but don't ack the message.
-                # Also, log the exception.
-                logging.exception("Exception handling data")
-
-                if self.handle_exception is not None:
-                    self.handle_exception()
-
-                if message:
-                    if self.requeue:
-                        message.requeue()
-                    elif self.reject:
-                        message.reject()
-
-                stats.mark_failed_job(self.statsd_client)
-
-            else:
-                # Queue up the new messages (if any).
-                #
-                if new_messages:
-                    self.queue_new_messages(new_messages)
-
-                # We're done with the original message.
-                #
-                message.ack()
 
     def batched_run_forever(self, size, wait_timeout_seconds=5, **kwargs):
         """This will take messages off the queue and put them in a buffer.
@@ -203,9 +212,9 @@ class Consumer(object):
         Otherwise all messages are requeued/rejected.
         """
         buffer = []
+        successive_failures = 0
 
         while not self.is_terminated():
-            new_messages = []
             try:
                 self.wait_if_paused()
 
@@ -213,12 +222,17 @@ class Consumer(object):
                 message = None
 
                 try:
-                    # We need to have a timeout. Otherwise if we had no more
-                    # messages coming in, but len(buffer) < size, then the
-                    # buffer would never get processed!
                     message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
                 except queue.Empty:
                     queue_was_empty = True
+                    logging.warning("Empty")
+                except Exception as e:
+                    logging.exception("Exception getting message: %s", e)
+                    successive_failures += 1
+                    if self.max_retries is not None and successive_failures > self.max_retries:
+                        raise
+                    self._connect()
+                    continue
 
                 if message:
                     buffer.append(message)
@@ -227,60 +241,49 @@ class Consumer(object):
                 # 1. it has reached the given size or
                 # 2. we drained the queue, but the buffer is smaller than size
                 if len(buffer) >= size or (buffer and queue_was_empty):
-                    try:
-                        with stats.time_block(self.statsd_client):
-                            new_messages = self.handle_batch(buffer, **kwargs)
+                    with stats.time_block(self.statsd_client):
+                        try:
+                            new_messages = self.handle_data(
+                                [message.payload for message in buffer],
+                                **kwargs
+                            )
+                            if new_messages:
+                                self.queue_new_messages(new_messages)
+                        except Exception as e:
+                            logging.exception("Exception handling batch: %s", e)
 
-                        stats.mark_successful_job(self.statsd_client)
-                        self.post_handle_data()
-                    except KeyboardInterrupt as ki:
-                        # Raise this for the outer try to handle.
-                        raise ki
-                    except:
-                        logging.exception("Exception handling batch")
-                        if self.handle_exception is not None:
-                            self.handle_exception()
+                            for message in buffer:
+                                if self.requeue:
+                                    message.requeue()
+                                elif self.reject:
+                                    message.reject()
+
+                            if self.handle_exception is not None:
+                                self.handle_exception()
+
+                            stats.mark_failed_job(self.statsd_client)
+                            continue
+
+                    try:
+                        for message in buffer:
+                            message.ack()
+                    except Exception as e:
+                        logging.exception("Exception acking batch: %s", e)
+                        successive_failures += 1
+                        if self.max_retries is not None and successive_failures > self.max_retries:
+                            raise
+                        self._connect()
                         stats.mark_failed_job(self.statsd_client)
-                    finally:
-                        # If all went well then we have ack'd the messages.
-                        # If not, we have requeued or rejected them.
-                        # Either way we are done with the buffer.
-                        buffer = []
+                        continue
+
+                    stats.mark_successful_job(self.statsd_client)
+                    self.post_handle_data()
+                    buffer = []
+                    successive_failures = 0
 
             except KeyboardInterrupt:
                 logging.info("Caught Ctrl-C. Byee!")
                 break
-
-            except:
-                # When could this happen? Perhaps while waiting?
-                logging.exception("Exception elsewhere in batched_run_forever")
-
-            else:
-                if new_messages:
-                    self.queue_new_messages(new_messages)
-
-    def handle_batch(self, messages, **kwargs):
-        """Call handle_data on a batch of messages.
-        All messages will be ack'd only if the entire function succeeds.
-        Otherwise all messages will be rejected/requeued.
-        """
-        new_messages = []
-        try:
-            new_messages = self.handle_data([message.payload for message in messages], **kwargs)
-            # If we are here, then handle_data ran without any erroes.
-            for message in messages:
-                message.ack()
-        except Exception as e:
-            # There was a problem so we reject or requeue the whole batch.
-            for message in messages:
-                if self.requeue:
-                    message.requeue()
-                elif self.reject:
-                    message.reject()
-            # Now that we're done with the messages, handle the exception
-            raise e
-
-        return new_messages
 
     def wait_if_paused(self):
         """Check to see whether the current process should be paused, and

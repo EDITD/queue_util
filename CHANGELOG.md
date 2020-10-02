@@ -1,5 +1,6 @@
 # Changelog
-### Unreleased - leave this line in when you do a release, and leave 1 blank line underneath what you release
+## v3.2.0
+- Rework exception handling in consumer to avoid infinite logging loop in case of disconnection
 
 ## v3.1.0
 - Ability to pass kwargs in to handle_data operations
