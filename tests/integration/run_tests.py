@@ -8,15 +8,15 @@ import docker
 
 from . import app
 
-RABBIT_IMAGE = "rabbitmq:3.8.2-management-alpine"
-RABBIT_NAME = "rabbitmq_queue_utils_test_app_{}".format(os.getpid())
+RABBIT_IMAGE = 'rabbitmq:3.8.2-management-alpine'
+RABBIT_NAME = 'rabbitmq_queue_utils_test_app_{}'.format(os.getpid())
 
 
 @contextlib.contextmanager
 def rabbitmq_test_server():
     client = docker.from_env()
 
-    exposed_ports = ["{0}/tcp".format(port) for port in (5672, 15672)]
+    exposed_ports = ['{0}/tcp'.format(port) for port in (5672, 15672)]
     container = None
     try:
         container = client.containers.run(
@@ -28,7 +28,7 @@ def rabbitmq_test_server():
         )
         # The docker-py API is not great to get the host port
         # See https://github.com/docker/docker-py/issues/1451
-        host_ports = client.api.inspect_container(container.id)["NetworkSettings"]["Ports"]
+        host_ports = client.api.inspect_container(container.id)['NetworkSettings']['Ports']
         yield [int(host_ports[port][0]['HostPort']) for port in exposed_ports]
     finally:
         if container is not None:
@@ -40,7 +40,7 @@ def main():
     RABBIT_QUEUE_NAME = 'queue_util_test_app'
 
     with rabbitmq_test_server() as rabbit_ports:
-        print("Rabbit open on {}".format(rabbit_ports))
+        print('Rabbit open on {}'.format(rabbit_ports))
         return app.main(RABBIT_QUEUE_NAME, rabbit_host=RABBIT_HOST, rabbit_port=rabbit_ports[0])
 
 
