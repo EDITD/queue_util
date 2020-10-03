@@ -1,5 +1,6 @@
 import re
 import sys
+from os import path
 
 import setuptools
 
@@ -11,19 +12,27 @@ REQUIREMENTS = [
     'statsd>=3.3.0,<4',
 ]
 
+base_dir = path.abspath(path.dirname(__file__))
+
 # Regex matching version pattern
 # (3 numerical values separated by `.`, semver style, followed by an optional pre-release marker)
 version_pattern = re.compile(r'\d+\.\d+\.\d+([.-][\w_-]+)?')
 
 
 def get_version():
-    changelog_file = 'CHANGELOG.md'
+    changelog_file = path.join(base_dir, 'CHANGELOG.md')
     with open(changelog_file, 'r') as changelog:
         for changelog_line in changelog:
             version = version_pattern.search(changelog_line)
             if version is not None:
                 return ''.join(version.group())
         raise RuntimeError("Couldn't find a valid version in {}".format(changelog_file))
+
+
+def get_readme_content():
+    readme_file = path.join(base_dir, 'README.md')
+    with open(readme_file, 'r') as f:
+        return f.read()
 
 
 if __name__ == '__main__':
@@ -40,9 +49,8 @@ if __name__ == '__main__':
         packages=setuptools.find_packages(),
         scripts=[],
         url='https://github.com/EDITD/queue_util',
-        license='file: LICENSE.txt',
         description='A set of utilities for consuming (and producing) from a rabbitmq queue',
-        long_description='file: README.md',
+        long_description=get_readme_content(),
         long_description_content_type='text/markdown',
         install_requires=REQUIREMENTS,
         extras_require={
