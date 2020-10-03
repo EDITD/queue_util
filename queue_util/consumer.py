@@ -24,6 +24,7 @@ If used with batched_run_forever, handle_data is called with a list of payloads
 i.e.
     self.handle_data([message.payload for message in current_batch])
 """
+import collections
 import logging
 import os
 import socket
@@ -176,12 +177,12 @@ class Consumer(object):
                 with stats.time_block(self.statsd_client):
                     try:
                         new_messages = self.handle_data(data, **kwargs)
-                        if new_messages:
+                        if new_messages is not None:
                             self.queue_new_messages(new_messages)
                     except Exception as e:
                         logging.exception('Exception handling data: %s', e)
 
-                        if self.handle_exception is not None:
+                        if self.handle_exception:
                             self.handle_exception()
 
                         if self.requeue:
@@ -219,7 +220,7 @@ class Consumer(object):
         If handle_data doesn't throw an exception, all messages are ack'd.
         Otherwise all messages are requeued/rejected.
         """
-        buffer = []
+        buffer = collections.deque()
         successive_failures = 0
 
         while not self.is_terminated():
@@ -227,13 +228,11 @@ class Consumer(object):
                 self.wait_if_paused()
 
                 queue_was_empty = False
-                message = None
 
                 try:
                     message = self.source_queue.get(block=True, timeout=wait_timeout_seconds)
                 except queue.Empty:
                     queue_was_empty = True
-                    logging.warning('Empty')
                 except Exception as e:
                     logging.exception('Exception getting message: %s', e)
                     successive_failures += 1
@@ -241,8 +240,7 @@ class Consumer(object):
                         raise
                     self._connect()
                     continue
-
-                if message:
+                else:
                     buffer.append(message)
 
                 # We proceed to handle the buffer if
@@ -253,7 +251,7 @@ class Consumer(object):
                         try:
                             payloads = [msg.payload for msg in buffer]
                             new_messages = self.handle_data(payloads, **kwargs)
-                            if new_messages:
+                            if new_messages is not None:
                                 self.queue_new_messages(new_messages)
                         except Exception as e:
                             logging.exception('Exception handling batch: %s', e)
@@ -264,7 +262,7 @@ class Consumer(object):
                                 elif self.reject:
                                     message.reject()
 
-                            if self.handle_exception is not None:
+                            if self.handle_exception:
                                 self.handle_exception()
 
                             stats.mark_failed_job(self.statsd_client)
@@ -284,7 +282,7 @@ class Consumer(object):
 
                     stats.mark_successful_job(self.statsd_client)
                     self.post_handle_data()
-                    buffer = []
+                    buffer.clear()
                     successive_failures = 0
 
             except KeyboardInterrupt:
