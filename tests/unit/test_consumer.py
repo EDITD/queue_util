@@ -14,7 +14,7 @@ class TestConsumer(unittest.TestCase):
     @mock.patch('logging.exception')
     def test_consumer(self, mock_logging_exception, mock_post_handle_data,
                       mock_statsd, mock_broker_connection):
-        "A handle_data generator function"
+        """A handle_data generator function"""
 
         # Handler that yields messages the first time it is called and then
         # raises a KeyboardInterrupt on subsequent calls.
@@ -35,7 +35,7 @@ class TestConsumer(unittest.TestCase):
             'source_queue', HandleData().handle_data,
             rabbitmq_host='host',
             handle_exception=handle_exception,
-            statsd_host='stats'
+            statsd_host='stats',
         )
         c.run_forever()
 
@@ -47,7 +47,7 @@ class TestConsumer(unittest.TestCase):
         expected = [
             mock.call(block=True, timeout=None),
             mock.call().ack(),
-            mock.call(block=True, timeout=None)
+            mock.call(block=True, timeout=None),
         ]
         source.get.assert_has_calls(expected)
 
@@ -84,7 +84,7 @@ class TestConsumer(unittest.TestCase):
     @mock.patch('logging.exception')
     def test_retry_failures(self, mock_logging_exception, mock_post_handle_data,
                             mock_statsd, mock_broker_connection):
-        "Failed messages are retried"
+        """Failed messages are retried"""
         # Handler that raises a ValueError the first time it is called and then
         # raises a KeyboardInterrupt on subsequent calls.
         class HandleData(object):
@@ -104,7 +104,7 @@ class TestConsumer(unittest.TestCase):
             handle_exception=handle_exception,
             statsd_host='stats',
             dont_requeue=False,
-            reject=False
+            reject=False,
         )
         c.run_forever()
 
@@ -129,7 +129,7 @@ class TestConsumer(unittest.TestCase):
 
     @mock.patch('kombu.BrokerConnection', autospec=True)
     def test_reject_failures(self, mock_broker_connection):
-        "Failed messages are rejected"
+        """Failed messages are rejected"""
         # Handler that raises a ValueError the first time it is called and then
         # raises a KeyboardInterrupt on subsequent calls.
         class HandleData(object):
@@ -146,7 +146,7 @@ class TestConsumer(unittest.TestCase):
             'source_queue', HandleData().handle_data,
             rabbitmq_host='host',
             dont_requeue=True,
-            reject=True
+            reject=True,
         )
         c.run_forever()
 
@@ -163,7 +163,7 @@ class TestConsumer(unittest.TestCase):
     @mock.patch('logging.exception')
     def test_consumer_batch(self, mock_logging_exception, mock_post_handle_data,
                             mock_statsd, mock_broker_connection):
-        "A handle_data generator function"
+        """A handle_data generator function"""
 
         # Handler that yields messages the first time it is called and then
         # raises a KeyboardInterrupt on subsequent calls.
@@ -183,7 +183,7 @@ class TestConsumer(unittest.TestCase):
             'source_queue', HandleData().handle_data,
             rabbitmq_host='host',
             handle_exception=handle_exception,
-            statsd_host='stats'
+            statsd_host='stats',
         )
         c.batched_run_forever(size=10)
 
@@ -221,7 +221,7 @@ class TestConsumer(unittest.TestCase):
     @mock.patch('logging.exception')
     def test_batch_retry_failures(self, mock_logging_exception, mock_post_handle_data,
                                   mock_statsd, mock_broker_connection):
-        "Batches of failed messages are retried"
+        """Batches of failed messages are retried"""
         # Handler that raises a ValueError the first time it is called and then
         # raises a KeyboardInterrupt on subsequent calls.
         class HandleData(object):
@@ -241,7 +241,7 @@ class TestConsumer(unittest.TestCase):
             handle_exception=handle_exception,
             statsd_host='stats',
             dont_requeue=False,
-            reject=False
+            reject=False,
         )
         c.batched_run_forever(size=10)
 
@@ -266,7 +266,7 @@ class TestConsumer(unittest.TestCase):
 
     @mock.patch('kombu.BrokerConnection', autospec=True)
     def test_batch_reject_failures(self, mock_broker_connection):
-        "Failed messages are rejected"
+        """Failed messages are rejected"""
         # Handler that raises a ValueError the first time it is called and then
         # raises a KeyboardInterrupt on subsequent calls.
         class HandleData(object):
@@ -283,7 +283,7 @@ class TestConsumer(unittest.TestCase):
             'source_queue', HandleData().handle_data,
             rabbitmq_host='host',
             dont_requeue=True,
-            reject=True
+            reject=True,
         )
         c.batched_run_forever(size=10)
 
