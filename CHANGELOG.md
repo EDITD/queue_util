@@ -1,4 +1,11 @@
 # Changelog
+## v3.2.1
+- Minor clean-up to the code
+- Added (some) unit tests and linting
+- Fixing description and license in Pypi
+- Add end-of-life message to README
+- Change development status in Pypi
+
 ## v3.2.0
 - Rework exception handling in consumer to avoid infinite logging loop in case of disconnection
 
