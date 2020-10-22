@@ -1,4 +1,7 @@
 # Changelog
+## v3.2.2
+- Migrate to TravisCI.com
+
 ## v3.2.1
 - Minor clean-up to the code
 - Added (some) unit tests and linting
